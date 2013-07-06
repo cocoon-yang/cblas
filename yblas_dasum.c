@@ -10,9 +10,6 @@
  *  =======
  *
  *     takes the sum of the absolute values.
- *     jack dongarra, linpack, 3/11/78.
- *     modified 3/93 to return if incx .le. 0.
- *     modified 12/3/93, array(1) declarations changed to array(*)
  *
  */
 void yblas_dasum(int N, double*DX, int INCX)
@@ -61,7 +58,7 @@ void yblas_dasum(int N, double*DX, int INCX)
 		}
 	}
 	//MP1 = M + 1;
-  MP1 = M ;
+  	MP1 = M ;
 	for (int I = MP1; i < N; i += 6)
 	{
 		DTEMP = DTEMP + fabs(DX[I]) + fabs(DX[I + 1]) + fabs(DX[I + 2]) + fabs(
