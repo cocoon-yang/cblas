@@ -12,7 +12,7 @@
  *     takes the sum of the absolute values.
  *
  */
-void yblas_dasum(int N, double*DX, int INCX)
+void cblas_dasum(int N, double*DX, int INCX)
 {
 
   //     .. Local Scalars ..
