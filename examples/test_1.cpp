@@ -49,9 +49,9 @@ double cor( int n, double *pX, double *pY )
 
 void main()
 {	  
-  double X[] = {15, 18, 21, 24, 27}; 
-  double Y[] = {25, 25, 27, 31, 32}; 
+    double X[] = {15, 18, 21, 24, 27}; 
+    double Y[] = {25, 25, 27, 31, 32}; 
 
-	double r = cor( 5, X, Y);
-	printf("corefficient r = %f \n", r);
+    double r = cor( 5, X, Y);
+    printf("corefficient r = %f \n", r);
 }
