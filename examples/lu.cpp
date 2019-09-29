@@ -5,9 +5,18 @@
 #include "cblas.h"
 #include "foo.h"
 
-
+/*
+Using LAPACK to solve linear functions
+ | 1.0  1.5  0.0  ... 0.0 |     | 0.0 |
+ | 1.5  2.0  2.5  ... 0.0 |     | 1.0 |
+ | 0.0  2.5  3.0  ... 0.0 | x = | 2.0 | 
+ |           ...          |     | ... |
+*/
 void largeTest( int num, double val )
 {
+    // Testing parameters
+    num = num > 0 ? num : 10;
+    
     int m = num;
     int n = num;
     int LDA = m; 
@@ -119,7 +128,6 @@ FREE_MEMORY:
 /* Main program */
 int main( int argc, char* argv[] )
 {
- 
    int num = 10;
    double val = 9.0;
    double diff = 0.2;
@@ -136,8 +144,7 @@ int main( int argc, char* argv[] )
    {
        diff  = atof(argv[3]);
    }
-   num = num > 0 ? num : 10;
-   
+      
    largeTest( num, val - diff ); 
 
    return 1;
