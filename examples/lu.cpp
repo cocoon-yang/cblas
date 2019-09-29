@@ -136,8 +136,9 @@ int main( int argc, char* argv[] )
    {
        diff  = atof(argv[3]);
    }
+   num = num > 0 ? num : 10;
+   
+   largeTest( num, val - diff ); 
 
-    largeTest( num, val - diff ); 
-
-	return 0;
-} /* End of LAPACKE_dgesv Example */
+   return 1;
+}  
