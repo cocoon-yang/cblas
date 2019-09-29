@@ -15,7 +15,7 @@ Using LAPACK to solve linear functions
 void largeTest( int num, double val )
 {
     // Testing parameters
-    num = num > 0 ? num : 10;
+    num = num > 1 ? num : 10;
     
     int m = num;
     int n = num;
