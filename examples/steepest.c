@@ -35,6 +35,13 @@ void dfunc(const double* x, double *df, int n)
     df[0] = 2.0 * x[0];    
     df[1] = 2.0 * x[1] + 1.0 ;  
 
+    double normal = cblas_ddot( n, df, 1, df, 1); 
+
+    if( fabs(normal) > precision )
+    {
+        df[0] = df[0] / normal; 
+        df[1] = df[1] / normal;    
+    } 
      return;
 }
 
