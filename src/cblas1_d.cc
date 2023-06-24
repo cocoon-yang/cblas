@@ -1,5 +1,5 @@
 /*
- * clas.cc
+ * cblas.cc
  *
  *  Created on: 2018-12-24
  *      Author: Yang
@@ -71,7 +71,7 @@ double cblas_dasum(const int N, const double *X, const int incX)
 	double dtemp = 0.0;
 	if ((N <= 0) || (incX <= 0))
 	{
-		printf("Error: in cblas_dasum(), Array number %6d less than zero.", N);
+		printf("Error: in cblas_dasum(), Array number %6d less than ZERO.", N);
 		return dtemp;
 	}
 	int i;
@@ -232,7 +232,7 @@ void cblas_drotg(double* DA, double* DB, double C, double S)
 	//    S = DB/R
 	//    Z = 1.0d0
 	//    IF (DABS(DA).GT.DABS(DB)) Z = S
-	//    IF (DABS(DB).GE.DABS(DA) .AND. C.NE.0.0d0) Z = 1.0d0/C
+	//    IF (DABS(DB) >= DABS(DA) .AND. C.NE.0.0d0) Z = 1.0d0/C
 
 Lab_10:
 	R = SCALE*sqrt(pow((*DA / SCALE), 2) + pow((*DB / SCALE), 2));
@@ -285,7 +285,7 @@ Lab_20:
 *     (DX**T) , WHERE **T INDICATES TRANSPOSE. THE ELEMENTS OF DX ARE IN
 *     (DY**T)
 *
-*     DX(LX+I*INCX), I = 0 TO N-1, WHERE LX = 1 IF INCX .GE. 0, ELSE
+*     DX(LX+I*INCX), I = 0 TO N-1, WHERE LX = 1 IF INCX  >=  0, ELSE
 *     LX = (-INCX)*N, AND SIMILARLY FOR SY USING LY AND INCY.
 *     WITH DPARAM(1)=DFLAG, H HAS ONE OF THE FOLLOWING FORMS..
 *
@@ -1083,145 +1083,90 @@ double cblas_dnrm2(const int N, const double *X, const int incX)
 
 
 
+/***
+DLASWP performs a series of row interchanges on the matrix A.
+One row interchange is initiated for each of rows K1 through K2 of A.
 
-void xerbla(char* SRNAME, int INFO)
+M: int, The number of rows of the matrix A.  M >= 0.
+N: int, The number of columns of the matrix A.  N >= 0.
+A: double*,  A is DOUBLE PRECISION array, dimension (LDA,N)
+On entry, the matrix of column dimension N to which the row
+interchanges will be applied.
+On exit, the permuted matrix.
+LDA: int, The leading dimension of the array A.  LDA >= max(1,M).
+K1: int, The first element of IPIV for which a row interchange will
+be done.
+K2: int, (K2-K1+1) is the number of elements of IPIV for which a row
+interchange will be done.
+IPIV: int*,  IPIV is INTEGER array, dimension (K1+(K2-K1)*abs(INCX))
+The vector of pivot indices. Only the elements in positions
+K1 through K1+(K2-K1)*abs(INCX) of IPIV are accessed.
+IPIV(K1+(K-K1)*abs(INCX)) = L implies rows K and L are to be
+interchanged.
+INCX: int, The increment between successive values of IPIV. If INCX
+is negative, the pivots are applied in reverse order.
+***/
+void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx)
 {
-	//	std::cout << "CBLAS: On entry to " << SRNAME << " parameter number " << INFO
-	//	<< " had an illegal value" << std::endl;
-	printf("CBLAS: On entry to  %s parameter number %d had an illegal value.", SRNAME, INFO);
+	int  i, i1, i2, inc, ip, ix, ix0, j, k, n32;
+	double   temp;
 
-}
-
-void cblas_xerbla(char* SRNAME, int INFO)
-{
-	//	std::cout << "CBLAS: On entry to " << SRNAME << " parameter number " << INFO
-	//	<< " had an illegal value" << std::endl;
-	printf("CBLAS: On entry to  %s parameter number %c had an illegal value.", SRNAME, INFO);
-
-}
-
-
-int MAX(int first, int second)
-{
-	return first ? second : first > second;
-}
-
-bool cblas_lsame(char CA, char CB)
-{
-	/* System generated locals */
-	bool ret_val;
-
-	/* Local variables */
-	//int inta, intb, zcode;
-	int INTA, INTB, ZCODE;
-
-	/*     Test if the characters are equal */
-
-	ret_val = (CA == CB);
-	if (ret_val)
-	{
-		return ret_val;
+	//      ..
+	//      .. Executable Statements ..
+	// 
+	//      Interchange row I with row IPIV(K1+(I-K1)*abs(INCX)) for each of rows
+	//      K1 through K2.
+	// 
+	if (incx > 0) {
+		ix0 = k1;
+		i1 = k1;
+		i2 = k2;
+		inc = 1;
 	}
-
-	/*     Now test for equivalence if both characters are alphabetic. */
-
-	ZCODE = 'Z';
-
-	/*     Use 'Z' rather than 'A' so that ASCII can be detected on Prime */
-	/*     machines, on which ICHAR returns a value with bit 8 set. */
-	/*     ICHAR('A') on Prime machines returns 193 which is the same as */
-	/*     ICHAR('A') on an EBCDIC machine. */
-
-	INTA = (unsigned char)CA;
-	INTB = (unsigned char)CB;
-
-	if (ZCODE == 90 || ZCODE == 122)
-	{
-
-		/*        ASCII is assumed - ZCODE is the ASCII code of either lower or */
-		/*        upper case 'Z'. */
-
-		if (INTA >= 97 && INTA <= 122)
-		{
-			INTA += -32;
-		}
-		if (INTB >= 97 && INTB <= 122)
-		{
-			INTB += -32;
-		}
-
+	else if (incx < 0) {
+		ix0 = k1 + (k1 - k2)*incx;
+		i1 = k2;
+		i2 = k1;
+		inc = -1;
 	}
-	else if (ZCODE == 233 || ZCODE == 169)
-	{
-
-		/*        EBCDIC is assumed - ZCODE is the EBCDIC code of either lower or */
-		/*        upper case 'Z'. */
-
-		if (INTA >= 129 && INTA <= 137 || INTA >= 145 && INTA <= 153 || INTA
-			>= 162 && INTA <= 169)
-		{
-			INTA += 64;
-		}
-		if (INTB >= 129 && INTB <= 137 || INTB >= 145 && INTB <= 153 || INTB
-			>= 162 && INTB <= 169)
-		{
-			INTB += 64;
-		}
-
-	}
-	else if (ZCODE == 218 || ZCODE == 250)
-	{
-
-		/*        ASCII is assumed, on Prime machines - ZCODE is the ASCII code */
-		/*        plus 128 of either lower or upper case 'Z'. */
-
-		if (INTA >= 225 && INTA <= 250)
-		{
-			INTA += -32;
-		}
-		if (INTB >= 225 && INTB <= 250)
-		{
-			INTB += -32;
-		}
-	}
-	ret_val = INTA == INTB;
-
-	/*     RETURN */
-
-	/*     End of LSAME */
-
-	return ret_val;
-}
-
-#define min(x,y) (((x) < (y)) ? (x) : (y))
-void showVector_d(double* data, int m )
-{
-	if (NULL == data)
-	{
+	else {
 		return;
 	}
-	for (int i = 0; i < m; i++) {
-		 printf("%12.5G", data[i]);
-		 if (0 != i)
-		 {
-			 if (0 == (i % 6)) {
-				 printf("\n");
-			 }
-		 }
-	}
-	printf("\n");
-}
-
-void showMatrix_d(double* data, int m, int k)
-{
-	if (NULL == data)
-	{
-		return;
-	}
-	for (int i = 0; i<min(m, 6); i++) {
-		for (int j = 0; j<min(k, 6); j++) {
-			printf("%12.5G", data[j + i*k]);
+	// 
+	n32 = (n / 32) * 32;
+	if (n32 != 0) {
+		for (j = 0; j < n32; j += 32) {
+			ix = ix0;
+			for (i = i1; i < i2; i += inc) {
+				ip = ipiv[ix];
+				if (ip != i) {
+					for (k = j; k < j + 31; k++) {
+						temp = a[i*lda + k];
+						a[i*lda + k] = a[ip*lda + k];
+						a[ip*lda + k] = temp;
+					}
+				}
+				ix = ix + incx;
+			}
 		}
-		printf("\n");
 	}
+	if (n32 != n) {
+		n32 = n32 + 1;
+		ix = ix0;
+		for (i = i1; i < i2; i += inc) {
+			ip = ipiv[ix];
+			if (ip != i) {
+				for (k = n32; k < n; k++) {
+					temp = a[i*lda + k];
+					a[i*lda + k] = a[ip*lda + k];
+					a[ip*lda + k] = temp;
+				}
+			}
+			ix = ix + incx;
+		}
+	}
+	// 
+	return;
+
+
 }
