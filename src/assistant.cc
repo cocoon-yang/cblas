@@ -6,6 +6,22 @@
 */
 #include "cblas.h"
 #include <limits>
+#include <string.h>
+
+#define min(x,y) (((x) < (y)) ? (x) : (y))
+#define max(x,y) (((x) > (y)) ? (x) : (y)) 
+
+#if defined(DBL_MAX)
+#define _MAX_DOUBLE_  DBL_MAX
+#else
+#define _MAX_DOUBLE_ 1.7976931348623158e+308
+#endif
+
+#if defined(DBL_MIN)
+#define _MIN_DOUBLE_  DBL_MIN
+#else
+#define _MIN_DOUBLE_  2.22507385850720200e-308
+#endif
 
 
 double sign(double A, double B)
@@ -66,7 +82,7 @@ double dlamch(char* CMACH)
 	}
 	else  if (cblas_lsame(*CMACH, 'S')) {
 		SFMIN = std::numeric_limits<double>::epsilon(); // tiny(ZERO);
-		SMALL = ONE / std::numeric_limits<double>::max(); //ONE / huge(ZERO);
+		SMALL = ONE / _MAX_DOUBLE_; //ONE / huge(ZERO);
 		if (SMALL >= SFMIN) {
 			//
 			//           Use SMALL plus a bit, to avoid the possibility of rounding
@@ -98,7 +114,7 @@ double dlamch(char* CMACH)
 		RMACH = std::numeric_limits<double>::max_exponent ; // maxexpONEnt(ZERO)
 	}
 	else  if (cblas_lsame(*CMACH, 'O')) {
-		RMACH = std::numeric_limits<double>::max(); // huge(ZERO);
+		RMACH = _MAX_DOUBLE_; // huge(ZERO);
 	}
 	else {
 		RMACH = ZERO;
@@ -428,7 +444,7 @@ double dlapy2(double x, double y)
 	if (!(x_is_nan || y_is_nan)) {
 		xabs = fabs(x);
 		yabs = fabs(y);
-		w = MAX(xabs, yabs);
+		w = max(xabs, yabs);
 		z = min(xabs, yabs);
 		if( (z == zero) || (w > hugeval) ){
 			result = w;
@@ -471,6 +487,110 @@ void cblas_xerbla(char* SRNAME, int INFO)
 	printf("CBLAS: On entry to  %s parameter number %c had an illegal value.", SRNAME, INFO);
 	return;
 }
+
+
+
+/****
+@brief ILAENV returns problem-dependent parameters for the local
+environment.  See ISPEC for a description of the parameters.
+
+https://netlib.org/lapack/explore-html-3.6.1/db/deb/tstiee_8f_a453ec05c38be7fc786a3489c72cd4999.html
+In this version, the problem-dependent parameters are contained in
+the integer array IPARMS in the common block CLAENV and the value
+with index ISPEC is copied to ILAENV.  This version of ILAENV is
+to be used in conjunction with XLAENV in TESTING and TIMING.
+
+@param[in] ISPEC: int,
+Specifies the parameter to be returned as the value of
+ILAENV.
+= 1: the optimal blocksize; if this value is 1, an unblocked
+algorithm will give the best performance.
+= 2: the minimum block size for which the block routine
+should be used; if the usable block size is less than
+this value, an unblocked routine should be used.
+= 3: the crossover point (in a block routine, for N less
+than this value, an unblocked routine should be used)
+= 4: the number of shifts, used in the nonsymmetric
+eigenvalue routines
+= 5: the minimum column dimension for blocking to be used;
+rectangular blocks must have dimension at least k by m,
+where k is given by ILAENV(2,...) and m by ILAENV(5,...)
+= 6: the crossover point for the SVD (when reducing an m by n
+matrix to bidiagonal form, if max(m,n)/min(m,n) exceeds
+this value, a QR factorization is used first to reduce
+the matrix to a triangular form.)
+= 7: the number of processors
+= 8: the crossover point for the multishift QR and QZ methods
+for nonsymmetric eigenvalue problems.
+= 9: maximum size of the subproblems at the bottom of the
+computation tree in the divide-and-conquer algorithm
+(used by xGELSD and xGESDD)
+=10: ieee NaN arithmetic can be trusted not to trap
+=11: infinity arithmetic can be trusted not to trap
+
+@param[in] NAME    char*[]
+           The name of the calling subroutine, in either upper case or
+           lower case.
+
+@param[in] OPTS    char*[]
+          The character options to the subroutine NAME, concatenated
+          into a single character string.  For example, UPLO = 'U',
+          TRANS = 'T', and DIAG = 'N' for a triangular routine would
+          be specified as OPTS = 'UTN'.
+
+@param[in] N1      int
+@param[in] N2      int
+@param[in] N3      int
+@param[in] N4      int
+
+Problem dimensions for the subroutine NAME; these may not all
+     be required.
+
+@return 
+      >= 0: the value of the parameter specified by ISPEC
+      < 0:  if ILAENV = -k, the k-th argument had an illegal value.
+
+*/
+int ilaenv(int ispec, char* name, char OPTS, int N1, int N2, int N3, int N4)
+{
+	if ((ispec >= 1) & (ispec <= 5)) {
+/*
+*        Return a value from the common block.
+*/ 
+		char t[5];
+		char geqr[] = "GEQR ";
+		char gelq[] = "GELQ ";
+		strncpy(t, name, 5);
+		int ret = strcmp(t, geqr);
+		if (0 == ret)
+		{
+			if (N3 == 2) {
+				return 2;
+			}
+			else {
+				return 1;
+			} 
+		}
+		ret = strcmp(t, gelq);
+		if (0 == ret)
+		{
+			if (N3 == 2) {
+				return 2;
+			}
+			else {
+				return 1;
+			}
+		}
+		return ispec;
+	}
+	else if (ispec == 6) {
+
+
+	}
+
+	return 0;
+}
+
 
 
 //int MAX(int first, int second)

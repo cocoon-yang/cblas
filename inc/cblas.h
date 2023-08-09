@@ -2,7 +2,7 @@
  * cblas.h
  *
  *  Created on: 2018-12-24
- *      Author: Yang
+ *      Author: Chunfeng Yang 
  */
 
 #ifndef D_INC_CBLAS_H_
@@ -80,7 +80,10 @@ extern "C" MATHLIBRARY_API void cblas_dtrmm(char side, char uplo, char transa, c
 extern "C" MATHLIBRARY_API void cblas_dtrsm(char side, char uplo, char transa, char diag, int m, int n,
 	double alpha, double a[], int lda, double b[], int ldb);
 
+extern "C" MATHLIBRARY_API void cblas_dpotrf2(char uplo, int n, double *A, int lda, int info);
 
+//extern "C" MATHLIBRARY_API void dsyrk(char uplo, char 	trans, int n, int k,
+//	double alpha, double *A, int lda, double beta, double *c, int ldc);
 //==============================================================
 // Lapack
 
@@ -90,26 +93,23 @@ extern "C" MATHLIBRARY_API void cblas_dlas2(double f, double g, double h, double
 // Assistant functions
 extern bool cblas_lsame(char CA, char CB);
 
-
 extern "C" MATHLIBRARY_API void cblas_dlarfg(int N, double& ALPHA, double* X, int INCX, double& TAU);
 
 extern "C" MATHLIBRARY_API void cblas_xerbla(char* SRNAME, int INFO);
-void xerbla(char* SRNAME, int INFO);
-//int MAX(const int first, const int second );
-//double MAX(const double first, const double second);
-// int MIN(int first, int second);
-#define min(x,y) (((x) < (y)) ? (x) : (y))
 
-#define MAX(x,y) (((x) > (y)) ? (x) : (y))
+void xerbla(char* SRNAME, int INFO);
+
+int ilaenv(int ispec, char* name, char OPTS, int N1, int N2, int N3, int N4);
 
 extern "C" MATHLIBRARY_API void showMatrix_d(double* data, int rows, int columns);
 
 extern "C" MATHLIBRARY_API double sign(double A, double B);
 
-
 extern "C" MATHLIBRARY_API double dlamch(char* CMACH);
 double dlamc3(double A, double B);
+
 extern "C" MATHLIBRARY_API void dlasv2(double f, double g, double h, double& ssmin, double& ssmax,
 	double& snl, double& csl, double& snr, double& csr);
+
 extern "C" MATHLIBRARY_API double dlapy2(double x, double y);
 #endif /* D_INC_CBLAS_H_ */

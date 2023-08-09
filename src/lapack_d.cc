@@ -6,6 +6,9 @@
 #include "cblas.h"
 
 
+#define min(x,y) (((x) < (y)) ? (x) : (y))
+#define max(x,y) (((x) > (y)) ? (x) : (y)) 
+
 //
 // https://netlib.org/lapack/explore-html/d8/dfd/dlas2_8f_source.html#l00106
 //
@@ -94,7 +97,7 @@ void dlas2(double f, double g, double h, double& ssmin, double& ssMAX)
 	ga = fabs(g);
 	ha = fabs(h);
 	fhmn = min(fa, ha);
-	fhmx = MAX(fa, ha);
+	fhmx = max(fa, ha);
 
 	if (fhmn == ZERO) {
 		ssmin = ZERO;
@@ -102,7 +105,7 @@ void dlas2(double f, double g, double h, double& ssmin, double& ssMAX)
 			ssMAX = ga;
 		}
 		else {
-			ssMAX = MAX(fhmx, ga)*sqrt(ONE + (min(fhmx, ga) / (MAX(fhmx, ga))*MAX(fhmx, ga)));
+			ssMAX = max(fhmx, ga)*sqrt(ONE + (min(fhmx, ga) / (max(fhmx, ga))*max(fhmx, ga)));
 		}
 	}
 	else {
@@ -208,7 +211,7 @@ void dpstf2(char UPLO, int N, double* A, int LDA, int* PIV, int RANK, double TOL
 	else if (N < 0) {
 		INFO = -2;
 	}
-	else if (LDA < MAX(1, N)) {
+	else if (LDA < max(1, N)) {
 		INFO = -4;
 	}
 	if (INFO != 0) {

@@ -98,7 +98,7 @@ int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
 	{
 		INFO = 7;
 	}
-	else if (LDA < MAX(1, N))
+	else if (LDA < std::max(1, N))
 	{
 		INFO = 9;
 	}
@@ -196,7 +196,7 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
 	{
 		INFO = 3;
 	}
-	else if (LDA < MAX(1, M))
+	else if (LDA < std::max(1, M))
 	{
 		INFO = 6;
 	}
@@ -512,7 +512,7 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 	{
 		info = 4;
 	}
-	else if (lda < MAX(1, n))
+	else if (lda < std::max(1, n))
 	{
 		info = 6;
 	}

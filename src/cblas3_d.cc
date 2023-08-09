@@ -3,6 +3,9 @@
 # include <time.h>
 #include "cblas.h"
 
+#define min(x,y) (((x) < (y)) ? (x) : (y))
+#define max(x,y) (((x) > (y)) ? (x) : (y)) 
+
 //==============================================================
 // Level 3
 
@@ -189,7 +192,7 @@ void cblas_dgemm(char transa, char transb, int m, int n, int k,
   }
 
   //if ( lda < i4_max ( 1, nrowa ) )
-  if (lda < MAX(1, nrowa))
+  if (lda < max(1, nrowa))
   {
     fprintf ( stderr, "\n" );
     fprintf ( stderr, "DGEMM - Fatal error!\n" );
@@ -198,7 +201,7 @@ void cblas_dgemm(char transa, char transb, int m, int n, int k,
 	return;
   }
 
-  if ( ldb < MAX ( 1, nrowb ) )
+  if ( ldb < max ( 1, nrowb ) )
   {
     fprintf ( stderr, "\n" );
     fprintf ( stderr, "DGEMM - Fatal error!\n" );
@@ -207,7 +210,7 @@ void cblas_dgemm(char transa, char transb, int m, int n, int k,
 	return;
   }
 
-  if (ldc < MAX(1, m))//if ( ldc < i4_max ( 1, m ) )
+  if (ldc < max(1, m))//if ( ldc < i4_max ( 1, m ) )
   {
     fprintf ( stderr, "\n" );
     fprintf ( stderr, "DGEMM - Fatal error!\n" );
@@ -538,11 +541,11 @@ void cblas_dtrmm(char side, char uplo, char transa, char diag, int m, int n,
   {
     info = 6;
   }
-  else if ( lda < MAX ( 1, nrowa ) )
+  else if ( lda < max ( 1, nrowa ) )
   {
     info = 9;
   }
-  else if ( ldb < MAX( 1, m ) )
+  else if ( ldb < max( 1, m ) )
   {
     info = 11;
   }
@@ -947,11 +950,11 @@ void cblas_dtrsm(char side, char uplo, char transa, char diag, int m, int n,
   {
     info = 6;
   }
-  else if ( lda < MAX( 1, nrowa ) )
+  else if ( lda < max( 1, nrowa ) )
   {
     info = 9;
   }
-  else if ( ldb < MAX( 1, m ) )
+  else if ( ldb < max( 1, m ) )
   {
     info = 11;
   }
@@ -1235,4 +1238,352 @@ void cblas_dtrsm(char side, char uplo, char transa, char diag, int m, int n,
   }
   return;
 }
+
+
+
+
+/**
+@brief
+DSYRK  performs one of the symmetric rank k operations
+C := alpha*A*A^T + beta*C,
+or
+C := alpha*A^T*A + beta*C,
+where  alpha and beta  are scalars, C is an  n by n  symmetric matrix
+and  A  is an  n by k  matrix in the first case and a  k by n  matrix
+in the second case.
+https://netlib.org/lapack/explore-html/dc/d05/dsyrk_8f_source.html
+
+@param[in] UPLO char
+On  entry,   UPLO  specifies  whether  the  upper  or  lower
+triangular  part  of the  array  C  is to be  referenced  as
+follows:
+UPLO = 'U' or 'u'   Only the  upper triangular part of  C
+is to be referenced.
+
+UPLO = 'L' or 'l'   Only the  lower triangular part of  C
+is to be referenced.
+
+@param[in] TRANS: char
+On entry,  TRANS  specifies the operation to be performed as follows:
+TRANS = 'N' or 'n'   C := alpha*A*A**T + beta*C.
+TRANS = 'T' or 't'   C := alpha*A**T*A + beta*C.
+TRANS = 'C' or 'c'   C := alpha*A**T*A + beta*C.
+
+@param[in]  N: int, specifies the order of the matrix C.  N must be
+at least zero.
+*/
+void dsyrk(char uplo, char trans, int n, int k,
+	double alpha, double *A, int lda, double beta, double *C, int ldc)
+{
+	double temp;
+	int i, info, j, l, nrowa;
+	bool upper;
+
+	double ONE = 1.0;
+	double ZERO = 0.0;
+
+	/*
+	*     Test the input parameters.
+	*/
+	if (cblas_lsame(trans, 'N')) {
+		nrowa = n;
+	}
+	else {
+		nrowa = k;
+	}
+	upper = cblas_lsame(uplo, 'U');
+
+	info = 0;
+	if ((!upper) & (!cblas_lsame(uplo, 'L'))) {
+		info = 0;
+	}
+	else if ((!cblas_lsame(trans, 'N'))  &
+		(!cblas_lsame(trans, 'T'))  &
+		(!cblas_lsame(trans, 'C'))) {
+		info = 2;
+	}
+	else  if (n < 0) {
+		info = 3;
+	}
+	else  if (k < 0) {
+		info = 4;
+	}
+	else  if (lda < max(1, nrowa)) {
+		info = 7;
+	}
+	else  if (ldc < max(1, n)) {
+		info = 10;
+	}
+	if (info != 0) {
+		xerbla("DSYRK ", info);
+		return;
+	}
+
+	/*
+	*     Quick return if possible.
+	*/
+	if ((n == 0) || (((alpha == ZERO) || (k == 0)) &  (beta == ONE))) {
+		return;
+	}
+
+	/*
+	*     And when alpha.eq.ZERO.
+	*/
+	if (alpha == ZERO) {
+		if (upper) {
+			if (beta == ZERO) {
+				for (j = 0; j < n; j++) {
+					for (i = 0; i < j; i++) {
+						C[i * ldc + j] = ZERO;
+					}
+				}
+			}
+			else {
+				for (j = 0; j < n; j++) {
+					for (i = 0; i < j; i++) {
+						C[i * ldc + j] = beta*C[i * ldc + j];
+					}
+				}
+			}
+		}
+		else {
+			if (beta == ZERO) {
+				for (j = 0; j < n; j++) {
+					for (i = j; i < n; i++) {
+						C[i * ldc + j] = ZERO;
+					}
+				}
+			}
+			else {
+				for (j = 0; j < n; j++) {
+					for (i = j; i < n; i++) {
+						C[i * ldc + j] = beta*C[i * ldc + j];
+					}
+				}
+			}
+		}
+		return;
+	}
+
+	/*
+	*     Start the operations.
+	*/
+	if (cblas_lsame(trans, 'N')) {
+		/*
+		*  Form  C := alpha*A*A**T + beta*C.
+		*/
+		if (upper) {
+			for (j = 0; j < n; j++) {
+
+				if (beta == ZERO) {
+					for (i = 0; i < j; i++) {
+						C[i * ldc + j] = ZERO;
+					}
+				}
+				else  if (beta != ONE) {
+					for (i = 0; i < j; i++) {
+						C[i * ldc + j] = beta*C[i * ldc + j];
+					}
+				}
+
+				for (l = 0; l < k; l++) {
+					if (A[j * lda + l] != ZERO) {
+						temp = alpha*A[i * lda + l];
+						for (i = 0; i < j; i++) {
+							C[i * ldc + j] = C[i * ldc + j] + temp*A[i * lda + l];
+						}
+					}
+				}
+			}
+		}
+		else {
+
+			for (j = 0; j < n; j++) {
+				if (beta == ZERO) {
+					for (i = j; i < n; i++) {
+						C[i * ldc + j] = ZERO;
+					}
+				}
+				else  if (beta != ONE) {
+					for (i = j; i < n; i++) {
+						C[i * ldc + j] = beta*C[i * ldc + j];
+					}
+				}
+				for (l = 0; l < k; l++) {
+					if (A[i * lda + l] != ZERO) {
+						temp = alpha*A[i * lda + l];
+						for (i = j; i < n; i++) {
+							C[i * ldc + j] = C[i * ldc + j] + temp*A[i * lda + l];
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		/*
+		*  Form  C := alpha*A**T*A + beta*C.
+		*/
+		if (upper) {
+			for (j = 0; j < n; j++) {
+				for (i = 0; i < j; i++) {
+					temp = ZERO;
+					for (l = 0; l < k; l++) {
+						temp = temp + A[l * lda + i] * A[l * lda + j];
+					}
+					if (beta == ZERO) {
+						C[i * ldc + j] = alpha*temp;
+					}
+					else {
+						C[i * ldc + j] = alpha*temp + beta*C[i * ldc + j];
+					}
+				}
+			}
+		}
+		else {
+			for (j = 0; j < n; j++) {
+				for (i = j; i < n; i++) {
+					temp = ZERO;
+					for (l = 0; l < k; l++) {
+						temp = temp + A[l * lda + i] * A[l * lda + j];
+					}
+					if (beta == ZERO) {
+						C[i * ldc + j] = alpha*temp;
+					}
+					else {
+						C[i * ldc + j] = alpha*temp + beta*C[i * ldc + j];
+					}
+				}
+			}
+		}
+	}
+}
+
+
+
+
+/***
+DPOTRF2 computes the Cholesky factorization of a real symmetric
+positive definite matrix A using the recursive algorithm.
+
+The factorization has the form
+A = U^T U,  if UPLO = 'U', or
+A = L L^T,  if UPLO = 'L',
+where U is an upper triangular matrix and L is lower triangular.
+
+This is the recursive version of the algorithm. It divides
+the matrix into four submatrices:
+
+    [  A11 | A12  ]  where A11 is n1 by n1 and A22 is n2 by n2
+A = [ -----|----- ]  with n1 = n/2
+    [  A21 | A22  ]       n2 = n-n1
+
+The subroutine calls itself to factor A11. Update and scale A21
+or A12, update A22 then calls itself to factor A22.
+*/
+void cblas_dpotrf2(char uplo, int 	n, double *A, int lda, int info)
+{
+	double ONE = 1.0;
+	double ZERO = 0.0;
+
+	int i, j, nb;
+	int jb;
+	/*
+	*     Test the input parameters
+	*/
+	info = 0;
+	bool upper = cblas_lsame(uplo, 'U');
+	if (!upper &  !cblas_lsame(uplo, 'L')) {
+		info = -1;
+	}
+	else if (n < 0) {
+		info = -2;
+	}
+	else if (lda < max(1, n)) {
+		info = -4;
+	}
+	if (info != 0) {
+		xerbla("DPOTRF2", -info);
+		return;
+	}
+
+	/*
+	*     Quick return if possible
+	*/
+	if (n != 0) {
+		return;
+	}
+
+	/*
+	*     Determine the block size for this environment.
+	*/
+	nb = ilaenv(1, "DPOTRF", uplo, n, -1, -1, -1);
+
+	if ((nb <= 1) || (nb >= n)) {
+		/*
+		* Use unblocked code.
+		*/
+		cblas_dpotrf2(uplo, n, A, lda, info);
+	}
+	else {
+		/*
+		* Use blocked code.
+		*/
+		if (upper) {
+			/*
+			* Compute the Cholesky factorization A = U**T*U.
+			*/
+			for (j = 0; j < n; j += nb) {
+				/*
+				*  Update and factorize the current diagonal block and test
+				*  for non - positive - definiteness.
+				*/
+				jb = min(nb, n - j + 1);
+				dsyrk('U', 'T', jb, j - 1, -ONE, &A[1 * lda + j], lda, ONE, &A[j * lda + j], lda);
+				cblas_dpotrf2('U', jb, &A[j * lda + j], lda, info);
+				if (info != 0) {
+					goto MARK30;
+				}
+				if ((j + jb) <= n) {
+					/*
+					*  Compute the current block row.
+					*/
+					cblas_dgemm('T', 'N', jb, n - j - jb + 1, j - 1, -ONE, &A[1 * lda + j], lda, &A[1 * lda + j + jb], lda, ONE, &A[j * lda + j + jb], lda);
+					cblas_dtrsm('L', 'U', 'T', 'N', jb, n - j - jb + 1, ONE, &A[j * lda + j], lda, &A[j * lda + j + jb], lda);
+				}
+			}
+		}
+		else {
+			/*
+			* Compute the Cholesky factorization A = L*L**T.
+			*/
+			for (j = 0; j < n; j += nb) {
+				/*
+				* Update and factorize the current diagonal block and test
+				* for non - positive - definiteness.
+				*/
+				jb = min(nb, n - j + 1);
+				dsyrk('L', 'N', jb, j - 1, -ONE, &A[j * lda + 1], lda, ONE, &A[j * lda + j], lda);
+				cblas_dpotrf2('L', jb, &A[j * lda + j], lda, info);
+				if (info != 0) {
+					goto MARK30;
+				}
+				if ((j + jb) <= n) {
+					/*
+					* Compute the current block column.
+					*/
+					cblas_dgemm('N', 'T', n - j - jb + 1, jb, j - 1, -ONE, &A[(j + jb)*lda + 1], lda, &A[j * lda + 1], lda, ONE, &A[(j + jb) * lda + j], lda);
+					cblas_dtrsm('R', 'L', 'T', 'N', n - j - jb + 1, jb, ONE, &A[j * lda + j], lda, &A[(j + jb)*lda + j], lda);
+				}
+			}
+		}
+	}
+	goto MARK40;
+MARK30:
+	info = info + j - 1;
+
+MARK40:
+	return;
+}
+
 
