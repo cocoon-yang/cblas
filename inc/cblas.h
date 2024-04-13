@@ -20,6 +20,17 @@
 #define MATHLIBRARY_API __declspec(dllimport)
 #endif
 
+enum class MATRIX_TYPE {
+	GENERAL = 1,
+	SQUARE,
+	SYMMETRY,
+	TRI_UP,
+	TRI_LOW,
+};
+
+class MData;
+
+
 //==============================================================
 // Level 1
 
@@ -54,18 +65,31 @@ extern "C" MATHLIBRARY_API void cblas_dlaswp(int n, double* a, int lda, int k1, 
 //==============================================================
 // Level 2
 
-extern "C" MATHLIBRARY_API int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
-		int INCY, double* A, int LDA);
-
+/**
+@brief   matrix vector multiply
+*/
 extern "C" MATHLIBRARY_API int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
-		double* X, int INCX, double BETA, double* Y, int INCY);
+	double* X, int INCX, double BETA, double* Y, int INCY);
 
+/**
+@brief  triangular matrix vector multiply
+*/
 extern "C" MATHLIBRARY_API void cblas_dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 	double x[], int incx);
 
-//extern "C" MATHLIBRARY_API void cblas_dtrsv(char UPLO, char TRANS, char DIAG, const int  N, double *A, 
-//	const int LDA, double *X, const int INCX)
-//
+/**
+@brief  solving triangular matrix problems
+*/
+extern "C" MATHLIBRARY_API void cblas_dtrsv(char UPLO, char TRANS, char DIAG, const int  N, double* A,
+	const int LDA, double* X, const int INCX);
+
+/**
+@brief  performs the rank 1 operation A := alpha*x*y' + A
+*/
+extern "C" MATHLIBRARY_API int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
+		int INCY, double* A, int LDA);
+
+
 
 //==============================================================
 // Level 3
@@ -82,8 +106,11 @@ extern "C" MATHLIBRARY_API void cblas_dtrsm(char side, char uplo, char transa, c
 
 extern "C" MATHLIBRARY_API void cblas_dpotrf2(char uplo, int n, double *A, int lda, int info);
 
-//extern "C" MATHLIBRARY_API void dsyrk(char uplo, char 	trans, int n, int k,
-//	double alpha, double *A, int lda, double beta, double *c, int ldc);
+extern "C" MATHLIBRARY_API void cblas_dgetrf(int m, int n, double* pA, int lda, int* ipiv, int info);
+
+extern "C" MATHLIBRARY_API void cblas_dsyrk(char uplo, char trans, int n, int k,
+	double alpha, double* A, int lda, double beta, double* c, int ldc);
+
 //==============================================================
 // Lapack
 
@@ -91,25 +118,34 @@ extern "C" MATHLIBRARY_API void cblas_dlas2(double f, double g, double h, double
 
 //==============================================================
 // Assistant functions
-extern bool cblas_lsame(char CA, char CB);
+extern "C" MATHLIBRARY_API bool cblas_lsame(char CA, char CB);
+
+extern "C" MATHLIBRARY_API void cblas_dlarf(char side, int m, int n, int l, double* v, int incv, double tau, double* pC, int ldc, double* work);
 
 extern "C" MATHLIBRARY_API void cblas_dlarfg(int N, double& ALPHA, double* X, int INCX, double& TAU);
 
-extern "C" MATHLIBRARY_API void cblas_xerbla(char* SRNAME, int INFO);
+extern "C" MATHLIBRARY_API void cblas_xerbla(const char* SRNAME, int INFO);
 
-void xerbla(char* SRNAME, int INFO);
+void xerbla(const char* SRNAME, int INFO);
 
-int ilaenv(int ispec, char* name, char OPTS, int N1, int N2, int N3, int N4);
+extern "C" MATHLIBRARY_API int ilaenv(int ispec, const char* name, char OPTS, int N1, int N2, int N3, int N4);
 
 extern "C" MATHLIBRARY_API void showMatrix_d(double* data, int rows, int columns);
 
 extern "C" MATHLIBRARY_API double sign(double A, double B);
 
-extern "C" MATHLIBRARY_API double dlamch(char* CMACH);
+extern "C" MATHLIBRARY_API double dlamch(const char* CMACH);
 double dlamc3(double A, double B);
 
 extern "C" MATHLIBRARY_API void dlasv2(double f, double g, double h, double& ssmin, double& ssmax,
 	double& snl, double& csl, double& snr, double& csr);
 
-extern "C" MATHLIBRARY_API double dlapy2(double x, double y);
+extern "C" MATHLIBRARY_API double dlapy2(double x, double y); 
+
+extern "C" MATHLIBRARY_API double idamax(int n, double* dx, int incx); 
+
+extern "C" MATHLIBRARY_API int iladlc(int m, int n, double* pA, int lda);
+
+extern "C" MATHLIBRARY_API int iladlr(int m, int n, double* pA, int lda);
+
 #endif /* D_INC_CBLAS_H_ */
