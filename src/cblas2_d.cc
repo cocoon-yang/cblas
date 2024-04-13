@@ -1,7 +1,7 @@
 #include "cblas.h"
 #include <utility>
 #include "math.h" 
-
+#include "mdata.h"
 
 //==============================================================
 // Level 2
@@ -172,9 +172,9 @@ int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
 @param[in]  M: int,   the number of rows of the matrix A. 0 <= M.
 @param[in]  N: int,   the number of columns of the matrix A. 0 <= M.
 ***/
-int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
+int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* pA, int LDA,
 	double* X, int INCX, double BETA, double* Y, int INCY)
-{ 
+{
 	double ONE = 1.0;
 	double ZERO = 0.0;
 
@@ -210,7 +210,7 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
 	}
 	if (INFO != 0)
 	{
-		xerbla("DGEMV ", INFO);
+		//xerbla("DGEMV ", INFO);
 		return 0;
 	}
 
@@ -321,52 +321,15 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
 	{
 		return 0;
 	}
-	//	      IF (LSAME(TRANS,'N')) THEN
+
+	MData A(M, LDA);
+	A.setData(pA);
+
 	if (cblas_lsame(TRANS, 'N'))
 	{
-		/*
-		*        Form  y := alpha*A*x + y.
-		*/
-		// printf("Form  y := alpha*A*x + y.  \n");
-		JY = KY;
-		if (INCX == 1)
-		{
-			for (J = 0; J < N; J++) // C/C++ version
-									//for (J = 1; J < N; J++)  // Fortran version
-			{
-				TEMP = ZERO;
-				for (I = 0; I < M; I++)
-					// for (I = 1; I < M; I++) // Fortran version
-				{
-					TEMP = TEMP + A[(I)+(J)* LDA] * X[I];
-				}
-				Y[JY] = Y[JY] + ALPHA * TEMP;
-				JY = JY + INCY;
-			}
-		}
-		else
-		{
-			for (J = 0; J < N; J++) // C/C++ version
-									//for (J = 1; J < N; J++)  // Fortran version
-			{
-				TEMP = ZERO;
-				IX = KX;
-				for (I = 0; I < M; I++)
-					// for (I = 1; I < M; I++) // Fortran version
-				{
-					TEMP = TEMP + A[(I)+(J)* LDA] * X[IX];
-					IX = IX + INCX;
-				}
-				Y[JY] = Y[JY] + ALPHA * TEMP;
-				JY = JY + INCY;
-			}
-		}
-	}
-	else
-	{
-		//	     *
-		//	     *        Form  y := alpha*A'*x + y.
-		//	     *
+		// 
+		//  Form  y := alpha*A*x + y.
+		// 
 		JX = KX;
 		if (INCY == 1)
 		{
@@ -377,7 +340,7 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
 					TEMP = ALPHA * X[JX];
 					for (I = 0; I < M; I++)
 					{
-						Y[I] = Y[I] + TEMP * A[I + J * LDA];
+						Y[I] = Y[I] + TEMP * A[I][J];
 					}
 				}
 				JX = JX + INCX;
@@ -394,11 +357,47 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
 					for (I = 0; I < M; I++)
 						// for (I = 1; I < M; I++) // Fortran version
 					{
-						Y[IY] = Y[IY] + TEMP * A[(I)+(J)* LDA];
+						Y[IY] = Y[IY] + TEMP * A[I][J];
 						IY = IY + INCY;
 					}
 				}
 				JX = JX + INCX;
+			}
+		}
+	}
+	else
+	{
+		/*
+		*        Form  y := alpha*A'*x + y.
+		*/
+		JY = KY;
+		if (INCX == 1)
+		{
+			for (J = 0; J < N; J++)
+			{
+				TEMP = ZERO;
+				for (I = 0; I < M; I++)
+				{
+					TEMP = TEMP + A[I][J] * X[I];
+					// std::cout << "TEMP = TEMP + A[" << I << "][" << J << "] * X[" << I << "]" << std::endl;
+				}
+				Y[JY] = Y[JY] + ALPHA * TEMP;
+				JY = JY + INCY;
+			}
+		}
+		else
+		{
+			for (J = 0; J < N; J++)
+			{
+				TEMP = ZERO;
+				IX = KX;
+				for (I = 0; I < M; I++)
+				{
+					TEMP = TEMP + A[I][J] * X[IX];
+					IX = IX + INCX;
+				}
+				Y[JY] = Y[JY] + ALPHA * TEMP;
+				JY = JY + INCY;
 			}
 		}
 	}
@@ -480,7 +479,7 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* A, int LDA,
 //    Input, int INCX, the increment for the elements of
 //    X.  INCX must not be zero.
 //
-void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
+void cblas_dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 	double x[], int incx)
 {
 	int i;
@@ -523,7 +522,7 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 
 	if (info != 0)
 	{
-		xerbla("DTRMV", info);
+		//xerbla("DTRMV", info);
 		return;
 	}
 	//
@@ -547,6 +546,10 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 	{
 		kx = 0;
 	}
+
+	MData A(n, lda);
+	A.setData(a);
+
 	//
 	//  Start the operations. In this version the elements of A are
 	//  accessed sequentially with one pass through A.
@@ -560,90 +563,6 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 		{
 			if (incx == 1)
 			{
-				for (j = n - 1; 0 <= j; j--)
-				{
-					temp = x[j];
-					if (nounit)
-					{
-						temp = temp * a[j + j*lda];
-					}
-					for (i = j - 1; 0 <= i; i--)
-					{
-						temp = temp + a[i + j*lda] * x[i];
-					}
-					x[j] = temp;
-				}
-			}
-			else
-			{
-				jx = kx + (n - 1) * incx;
-				for (j = n - 1; 0 <= j; j--)
-				{
-					temp = x[jx];
-					ix = jx;
-					if (nounit)
-					{
-						temp = temp * a[j + j*lda];
-					}
-					for (i = j - 1; 0 <= i; i--)
-					{
-						ix = ix - incx;
-						temp = temp + a[i + j*lda] * x[ix];
-					}
-					x[jx] = temp;
-					jx = jx - incx;
-				}
-			}
-		}
-		else
-		{
-			if (incx == 1)
-			{
-				for (j = 0; j < n; j++)
-				{
-					temp = x[j];
-					if (nounit)
-					{
-						temp = temp * a[j + j*lda];
-					}
-					for (i = j + 1; i < n; i++)
-					{
-						temp = temp + a[i + j*lda] * x[i];
-					}
-					x[j] = temp;
-				}
-			}
-			else
-			{
-				jx = kx;
-				for (j = 0; j < n; j++)
-				{
-					temp = x[jx];
-					ix = jx;
-					if (nounit)
-					{
-						temp = temp * a[j + j*lda];
-					}
-					for (i = j + 1; i < n; i++)
-					{
-						ix = ix + incx;
-						temp = temp + a[i + j*lda] * x[ix];
-					}
-					x[jx] = temp;
-					jx = jx + incx;
-				}
-			}
-		}
-	}
-	//
-	//  Form x := A'*x.
-	//
-	else
-	{
-		if (cblas_lsame(uplo, 'U'))
-		{
-			if (incx == 1)
-			{
 				for (j = 0; j < n; j++)
 				{
 					if (x[j] != 0.0)
@@ -651,11 +570,11 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 						temp = x[j];
 						for (i = 0; i < j; i++)
 						{
-							x[i] = x[i] + temp * a[i + j*lda];
+							x[i] = x[i] + temp * A[i][j];
 						}
 						if (nounit)
 						{
-							x[j] = x[j] * a[j + j*lda];
+							x[j] = x[j] * A[j][j];
 						}
 					}
 				}
@@ -671,12 +590,12 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 						ix = kx;
 						for (i = 0; i < j; i++)
 						{
-							x[ix] = x[ix] + temp * a[i + j*lda];
+							x[ix] = x[ix] + temp * A[i][j];
 							ix = ix + incx;
 						}
 						if (nounit)
 						{
-							x[jx] = x[jx] * a[j + j*lda];
+							x[jx] = x[jx] * A[j][j];
 						}
 					}
 					jx = jx + incx;
@@ -694,11 +613,11 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 						temp = x[j];
 						for (i = n - 1; j < i; i--)
 						{
-							x[i] = x[i] + temp * a[i + j*lda];
+							x[i] = x[i] + temp * A[i][j];
 						}
 						if (nounit)
 						{
-							x[j] = x[j] * a[j + j*lda];
+							x[j] = x[j] * A[j][j];
 						}
 					}
 				}
@@ -715,12 +634,12 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 						ix = kx;
 						for (i = n - 1; j < i; i--)
 						{
-							x[ix] = x[ix] + temp * a[i + j*lda];
+							x[ix] = x[ix] + temp * A[i][j];
 							ix = ix - incx;
 						}
 						if (nounit)
 						{
-							x[jx] = x[jx] * a[j + j*lda];
+							x[jx] = x[jx] * A[j][j];
 						}
 					}
 					jx = jx - incx;
@@ -728,9 +647,397 @@ void dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 			}
 		}
 	}
-
+	else
+	{
+		//
+		//  Form x := A'*x.
+		//
+		if (cblas_lsame(uplo, 'U'))
+		{
+			if (incx == 1)
+			{
+				for (j = n - 1; 0 <= j; j--)
+				{
+					temp = x[j];
+					if (nounit)
+					{
+						temp = temp * A[j][j];
+					}
+					for (i = j - 1; 0 <= i; i--)
+					{
+						temp = temp + A[i][j] * x[i];
+					}
+					x[j] = temp;
+				}
+			}
+			else
+			{
+				jx = kx + (n - 1) * incx;
+				for (j = n - 1; 0 <= j; j--)
+				{
+					temp = x[jx];
+					ix = jx;
+					if (nounit)
+					{
+						temp = temp * A[j][j];
+					}
+					for (i = j - 1; 0 <= i; i--)
+					{
+						ix = ix - incx;
+						temp = temp + A[i][j] * x[ix];
+					}
+					x[jx] = temp;
+					jx = jx - incx;
+				}
+			}
+		}
+		else
+		{
+			if (incx == 1)
+			{
+				for (j = 0; j < n; j++)
+				{
+					temp = x[j];
+					if (nounit)
+					{
+						temp = temp * A[j][j];
+					}
+					for (i = j + 1; i < n; i++)
+					{
+						temp = temp + A[i][j] * x[i];
+						//std::cout << "temp = temp + A[" << i << "][" << j << "] * x[" << i << "]; " << std::endl;
+					}
+					x[j] = temp;
+				}
+			}
+			else
+			{
+				jx = kx;
+				for (j = 0; j < n; j++)
+				{
+					temp = x[jx];
+					ix = jx;
+					if (nounit)
+					{
+						temp = temp * A[j][j];
+					}
+					for (i = j + 1; i < n; i++)
+					{
+						ix = ix + incx;
+						temp = temp + A[i][j] * x[ix];
+					}
+					x[jx] = temp;
+					jx = jx + incx;
+				}
+			}
+		}
+	}
 	return;
 }
 
 
+/***
+@brief
+ DTRSV  solves one of the systems of equations
+
+	A*x = b,   or   A**T*x = b,
+
+ where b and x are n element vectors and A is an n by n unit, or
+ non-unit, upper or lower triangular matrix.
+
+ No test for singularity or near-singularity is included in this
+ routine. Such tests must be performed before calling this routine.
+
+ @param[in] uplo: char,
+			On entry, UPLO specifies whether the matrix is an upper or
+		   lower triangular matrix as follows:
+
+			  UPLO = 'U' or 'u'   A is an upper triangular matrix.
+
+			  UPLO = 'L' or 'l'   A is a lower triangular matrix.
+
+ @param[in] trans: char,
+			On entry, TRANS specifies the equations to be solved as
+		   follows:
+
+			  TRANS = 'N' or 'n'   A*x = b.
+
+			  TRANS = 'T' or 't'   A**T*x = b.
+
+			  TRANS = 'C' or 'c'   A**T*x = b.
+
+ @param[in] diag: char,
+			On entry, DIAG specifies whether or not A is unit
+		   triangular as follows:
+
+			  DIAG = 'U' or 'u'   A is assumed to be unit triangular.
+
+			  DIAG = 'N' or 'n'   A is not assumed to be unit
+								  triangular.
+
+ @param[in] n: int,
+			On entry, N specifies the order of the matrix A.
+		   N must be at least zero.
+
+ @param[in] pA: double*
+			Before entry with  UPLO = 'U' or 'u', the leading n by n
+		   upper triangular part of the array A must contain the upper
+		   triangular matrix and the strictly lower triangular part of
+		   A is not referenced.
+		   Before entry with UPLO = 'L' or 'l', the leading n by n
+		   lower triangular part of the array A must contain the lower
+		   triangular matrix and the strictly upper triangular part of
+		   A is not referenced.
+		   Note that when  DIAG = 'U' or 'u', the diagonal elements of
+		   A are not referenced either, but are assumed to be unity.
+
+ @param[in] lda: int
+			On entry, LDA specifies the first dimension of A as declared
+		   in the calling (sub) program. LDA must be at least
+		   max( 1, n ).
+
+ @param[in] x: double*
+			Before entry, the incremented array X must contain the n
+		   element right-hand side vector b. On exit, X is overwritten
+		   with the solution vector x.
+
+ @param[in] incx: int
+			On entry, INCX specifies the increment for the elements of
+		   X. INCX must not be zero.
+*/
+void cblas_dtrsv(char uplo, char trans, char diag, int n, double* pA, int lda, double* x, int incx)
+{
+	double zero = 0.0;
+
+	double temp;
+	int i, info, ix, j, jx, kx;
+
+	bool nounit;
+	/*
+	* Test the input parameters.
+	*/
+
+	info = 0;
+	if (!cblas_lsame(uplo, 'U') && !cblas_lsame(uplo, 'L')) {
+		info = 1;
+	}
+	else if (!cblas_lsame(trans, 'N') && !cblas_lsame(trans, 'T') && !cblas_lsame(trans, 'C')) {
+		info = 2;
+	}
+	else if (!cblas_lsame(diag, 'U') && !cblas_lsame(diag, 'N')) {
+		info = 3;
+	}
+	else if (n < 0) {
+		info = 4;
+	}
+	else if (lda < std::max(1, n)) {
+		info = 6;
+	}
+	else if (incx == 0) {
+		info = 8;
+	}
+	if (info != 0) {
+		cblas_xerbla("DTRSV ", info);
+		return;
+	}
+
+	/*
+	* Quick return if possible.
+	*/
+	if (n == 0)
+	{
+		return;
+	}
+
+	nounit = cblas_lsame(diag, 'N');
+
+	/*
+	*     Set up the start point in X if the increment is not unity. This
+	*     will be  ( N - 1 )*INCX  too small for descending loops.
+	*/
+
+	if (incx <= 0) {
+		kx = 1 - (n - 1) * incx;
+	}
+	else if (incx != 1) {
+		kx = 1;
+	}
+
+	MData a(n, lda);
+	a.setData(pA);
+
+
+	/*
+	*     Start the operations. In this version the elements of A are
+	*     accessed sequentially with one pass through A.
+	*/
+
+	if (cblas_lsame(trans, 'N')) {
+		/*
+		*        Form  x := inv( A )*x.
+		*/
+		if (cblas_lsame(uplo, 'U'))
+		{
+			if (incx == 1) {
+				for (j = n - 1; j >= 0; j--)
+				{
+					if (x[j] != zero) {
+						if (nounit)
+						{
+							x[j] = x[j] / a[j][j];
+						}
+						temp = x[j];
+						for (i = j - 1; i >= 0; i--)
+						{
+							x[i] = x[i] - temp * a[i][j];
+						}
+					}
+				}
+			}
+			else {
+				jx = kx + (n - 1) * incx;
+				for (j = n - 1; j >= 0; j--)
+				{
+					if (x[jx] != zero)
+					{
+						if (nounit)
+						{
+							x[jx] = x[jx] / a[j][j];
+						}
+						temp = x[jx];
+						ix = jx;
+						for (i = j - 1; i >= 0; i--)
+						{
+							ix = ix - incx;
+							x[ix] = x[ix] - temp * a[i][j];
+						}
+					}
+					jx = jx - incx;
+				}
+			}
+		}
+		else { // 'L'
+
+			if (incx == 1)
+			{
+				for (j = 0; j < n; j++)
+				{
+					if (x[j] != zero)
+					{
+						if (nounit)
+						{
+							x[j] = x[j] / a[j][j];
+						}
+						temp = x[j];
+						for (i = j + 1; i < n; i++)
+						{
+							x[i] = x[i] - temp * a[i][j];
+						}
+					}
+				}
+			}
+			else {
+				jx = kx;
+				for (j = 0; j < n; j++)
+				{
+					if (x[jx] != zero)
+					{
+						if (nounit)
+						{
+							x[jx] = x[jx] / a[j][j];
+						}
+						temp = x[jx];
+						ix = jx;
+						for (i = j + 1; i < n; i++)
+						{
+							ix = ix + incx;
+							x[ix] = x[ix] - temp * a[i][j];
+						}
+					}
+					jx = jx + incx;
+				}
+			}
+		}
+	}
+	else {
+		/*
+		*        Form  x := inv( A**T )*x.
+		*/
+		if (cblas_lsame(uplo, 'U'))
+		{
+			if (incx == 1) {
+				for (j = 0; j < n; j++)
+				{
+					temp = x[j];
+					for (i = 0; i < j; i++)
+					{
+						temp = temp - a[i][j] * x[i];
+					}
+					if (nounit)
+					{
+						temp = temp / a[j][j];
+					}
+					x[j] = temp;
+				}
+			}
+			else {
+				jx = kx;
+				for (j = 0; j < n; j++)
+				{
+					temp = x[jx];
+					ix = kx;
+					for (i = 0; i < j; i++)
+					{
+						temp = temp - a[i][j] * x[ix];
+						ix = ix + incx;
+					}
+					if (nounit)
+					{
+						temp = temp / a[j][j];
+					}
+					x[jx] = temp;
+					jx = jx + incx;
+				}
+			}
+
+		}
+		else {
+			if (incx == 1) {
+				for (j = n - 1; j >= 0; j--)
+				{
+					temp = x[j];
+					for (i = n - 1; i >= (j + 1); i--)
+					{
+						temp = temp - a[i][j] * x[i];
+					}
+					if (nounit)
+					{
+						temp = temp / a[j][j];
+					}
+					x[j] = temp;
+				}
+			}
+			else {
+				kx = kx + (n - 1) * incx;
+				jx = kx;
+				for (j = n - 1; j >= 0; j--)
+				{
+					temp = x[jx];
+					ix = kx;
+					for (i = n - 1; i >= (j + 1); i--)
+					{
+						temp = temp - a[i][j] * x[ix];
+						ix = ix - incx;
+					}
+					if (nounit)
+					{
+						temp = temp / a[j][j];
+					}
+					x[jx] = temp;
+					jx = jx - incx;
+				}
+			}
+		}
+	}
+}
 

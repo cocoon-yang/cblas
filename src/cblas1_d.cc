@@ -7,6 +7,7 @@
 #include "cblas.h"
 #include <utility>
 #include "math.h" 
+#include "mdata.h"
 
 //==============================================================
 // Level 1
@@ -1106,7 +1107,7 @@ interchanged.
 INCX: int, The increment between successive values of IPIV. If INCX
 is negative, the pivots are applied in reverse order.
 ***/
-void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx)
+void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int incx)
 {
 	int  i, i1, i2, inc, ip, ix, ix0, j, k, n32;
 	double   temp;
@@ -1124,7 +1125,7 @@ void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx
 		inc = 1;
 	}
 	else if (incx < 0) {
-		ix0 = k1 + (k1 - k2)*incx;
+		ix0 = k1 + (k1 - k2) * incx;
 		i1 = k2;
 		i2 = k1;
 		inc = -1;
@@ -1132,6 +1133,9 @@ void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx
 	else {
 		return;
 	}
+
+	MData a(lda, n);
+	a.setData(pA);
 	// 
 	n32 = (n / 32) * 32;
 	if (n32 != 0) {
@@ -1141,9 +1145,9 @@ void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx
 				ip = ipiv[ix];
 				if (ip != i) {
 					for (k = j; k < j + 31; k++) {
-						temp = a[i*lda + k];
-						a[i*lda + k] = a[ip*lda + k];
-						a[ip*lda + k] = temp;
+						temp = a(i, k);
+						a(i, k) = a(ip, k);
+						a(ip, k) = temp;
 					}
 				}
 				ix = ix + incx;
@@ -1151,15 +1155,15 @@ void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx
 		}
 	}
 	if (n32 != n) {
-		n32 = n32 + 1;
+		n32 = n32;
 		ix = ix0;
 		for (i = i1; i < i2; i += inc) {
 			ip = ipiv[ix];
 			if (ip != i) {
 				for (k = n32; k < n; k++) {
-					temp = a[i*lda + k];
-					a[i*lda + k] = a[ip*lda + k];
-					a[ip*lda + k] = temp;
+					temp = a(i, k);
+					a(i, k) = a(ip, k);
+					a(ip, k) = temp;
 				}
 			}
 			ix = ix + incx;
@@ -1167,6 +1171,4 @@ void cblas_dlaswp(int n, double* a, int lda, int k1, int k2, int* ipiv, int incx
 	}
 	// 
 	return;
-
-
 }

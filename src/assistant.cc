@@ -4,12 +4,13 @@
 *  Created on: 2023-05-28
 *      Author: Yang
 */
-#include "cblas.h"
+#include "cblas.h" 
+#include "mdata.h"
 #include <limits>
 #include <string.h>
 
-#define min(x,y) (((x) < (y)) ? (x) : (y))
-#define max(x,y) (((x) > (y)) ? (x) : (y)) 
+//#define min(x,y) (((x) < (y)) ? (x) : (y))
+//#define max(x,y) (((x) > (y)) ? (x) : (y)) 
 
 #if defined(DBL_MAX)
 #define _MAX_DOUBLE_  DBL_MAX
@@ -22,6 +23,9 @@
 #else
 #define _MIN_DOUBLE_  2.22507385850720200e-308
 #endif
+
+
+
 
 
 double sign(double A, double B)
@@ -60,7 +64,7 @@ rmin  = underflow threshold - base**(emin-1)
 emax  = largest exponent before overflow
 rmax  = overflow threshold  - (base**emax)*(1-EPS)
 */
-double dlamch(char* CMACH)
+double dlamch(const char* CMACH)
 {
 	double ONE = 1.0;
 	double ZERO = 0.0;
@@ -133,6 +137,63 @@ double dlamc3(double A, double B)
 {
 	return A + B;
 }
+
+/***
+@brief IDAMAX finds the index of the first element having maximum absolute value.
+
+\param[in] N: int, number of elements in input vector(s)
+
+\param[in] DX: double*, dimension ( 1 + ( N - 1 )*abs( INCX ) )
+
+\param[in] INCX: int, storage spacing between elements of DX
+*/
+double idamax(int n, double* dx, int incx)
+{
+	double dmax;
+	int i, ix;
+
+	// Quick return
+	int result = 0;
+	if (n < 1 || incx <= 0)
+	{
+		return result;
+	}
+	result = 0;
+	if (n == 1)
+	{
+		return result;
+	}
+	if (incx == 1) {
+		//
+		//        code for increment equal to 1
+		//
+		dmax = fabs(dx[0]);
+		for (i = 1; i < n; i++) {
+			if (fabs(dx[i]) > dmax) {
+				result = i;
+				dmax = fabs(dx[i]);
+			}
+		}
+	}
+	else {
+		//
+		//  code for increment not equal to 1
+		//
+		ix = 0;
+		dmax = fabs(dx[0]);
+		ix = ix + incx;
+		for (i = 1; i < n; i++) {
+			if (fabs(dx[ix]) > dmax) {
+				result = i;
+				dmax = fabs(dx[ix]);
+			}
+			ix = ix + incx;
+		}
+	}
+	return result;
+}
+
+
 
 // DLARFG generates a real elementary reflector H of order n, such
 // that
@@ -255,6 +316,103 @@ void cblas_dlarfg(int N, double& ALPHA, double* X, int INCX, double& TAU)
 	//
 	return;
 }
+
+/***
+DLARF applies a real elementary reflector H to a real m by n matrix
+C, from either the left or the right. H is represented in the form
+
+H = I - tau * v * v**T
+
+where tau is a real scalar and v is a real vector.
+
+If tau = 0, then H is taken to be the unit matrix.
+*/
+void cblas_dlarf(char side, int m, int n, int l, double* v, int incv, double tau, double* pC, int ldc, double* work)
+{
+	double one = 1.0;
+	double zero = 0.0;
+	int i;
+
+	int lastv = 0;
+	int lastc = 0;
+	bool applyleft = false;
+	applyleft = cblas_lsame(side, 'L');
+
+	MData c(n, ldc);
+	c.setData(pC);
+
+	if (tau != zero)
+	{
+		//Set up variables for scanning V.LASTV begins pointing to the end
+		//of V.
+
+		if (applyleft) {
+			lastv = m;
+		}
+		else {
+			lastv = n;
+		}
+
+		if (incv > 0) {
+			i = 1 + (lastv - 1) * incv;
+		}
+		else {
+			i = 1;
+		}
+
+		//Look for the last non-zero row in V.
+		do {
+			lastv = lastv - 1;
+			i = i - incv;
+		} while ((lastv > 0) && (v[i] == zero));
+
+		if (applyleft) {
+			//Scan for the last non - zero column in C(1:lastv, : ).
+			lastc = iladlc(lastv, n, pC, ldc);
+		}
+		else {
+			//Scan for the last non - zero row in C(:, 1 : lastv).
+			lastc = iladlr(m, lastv, pC, ldc);
+		}
+	}
+
+	//Note that lastc.eq.0 renders the BLAS operations null; no special
+	//case is needed at this level.
+
+	if (applyleft) {
+		/*
+		* Form  H* C
+		*/
+		if (lastv > 0) {
+			/*
+			* w(1:lastc, 1) := C(1:lastv, 1 : lastc) * *T * v(1:lastv, 1)
+			*/
+			cblas_dgemv('T', lastv, lastc, one, pC, ldc, v, incv, zero, work, 1);
+			/*
+			* C(1:lastv, 1 : lastc) : = C(...) - v(1:lastv, 1) * w(1:lastc, 1) * *T
+			*/
+			cblas_dger(lastv, lastc, -tau, v, incv, work, 1, pC, ldc);
+		}
+	}
+	else {
+		/*
+		*Form  C * H
+		*/
+		if (lastv > 0) {
+			/*
+			*w(1:lastc, 1) := C(1:lastc, 1 : lastv) * v(1:lastv, 1)
+			*/
+			cblas_dgemv('N', lastc, lastv, one, pC, ldc, v, incv, zero, work, 1);
+			/*
+			*C(1:lastc, 1 : lastv) : = C(...) - w(1:lastc, 1) * v(1:lastv, 1) * *T
+			*/
+			cblas_dger(lastc, lastv, -tau, work, 1, v, incv, pC, ldc);
+		}
+	}
+
+}
+
+
 
 /*****
 DLASV2 computes the singular value decomposition of a 2-by-2
@@ -444,8 +602,8 @@ double dlapy2(double x, double y)
 	if (!(x_is_nan || y_is_nan)) {
 		xabs = fabs(x);
 		yabs = fabs(y);
-		w = max(xabs, yabs);
-		z = min(xabs, yabs);
+		w = std::max(xabs, yabs);
+		z = std::min(xabs, yabs);
 		if( (z == zero) || (w > hugeval) ){
 			result = w;
 		}
@@ -472,7 +630,7 @@ double dlapy2(double x, double y)
 //    INFO is INTEGER
 //          The position of the invalid parameter in the parameter list
 //          of the calling routine.
-void xerbla(char* SRNAME, int INFO)
+void xerbla(const char* SRNAME, int INFO)
 {
 	//	std::cout << "CBLAS: On entry to " << SRNAME << " parameter number " << INFO
 	//	<< " had an illegal value" << std::endl;
@@ -480,7 +638,7 @@ void xerbla(char* SRNAME, int INFO)
 	return;
 }
 
-void cblas_xerbla(char* SRNAME, int INFO)
+void cblas_xerbla(const char* SRNAME, int INFO)
 {
 	//	std::cout << "CBLAS: On entry to " << SRNAME << " parameter number " << INFO
 	//	<< " had an illegal value" << std::endl;
@@ -551,7 +709,7 @@ Problem dimensions for the subroutine NAME; these may not all
       < 0:  if ILAENV = -k, the k-th argument had an illegal value.
 
 */
-int ilaenv(int ispec, char* name, char OPTS, int N1, int N2, int N3, int N4)
+int ilaenv(int ispec, const char* name, char OPTS, int N1, int N2, int N3, int N4)
 {
 	if ((ispec >= 1) & (ispec <= 5)) {
 /*
@@ -686,6 +844,74 @@ bool cblas_lsame(char CA, char CB)
 }
 
 
+/**
+@brief
+ILADLC scans a matrix for its last non-zero column.
+*/
+int iladlc(int m, int n, double* pA, int lda)
+{
+	double zero = 0.0;
+	int i;
+	int result;
+
+	MData a(m, lda);
+	a.setData(pA);
+
+	// Quick test for the common case where one corner is non - zero.
+	if (n == 0) {
+		result = n;
+	}
+	else if ((a(0, n - 1) != zero) || (a(m - 1, n - 1) != zero)) {
+		result = n;
+	}
+	else {
+		// Now scan each column from the end, returning with the first non - zero.
+		for (result = n - 1; result >= 0; result--) {
+			for (i = 0; i < m; i++) {
+				if (a(i, result) != zero) {
+					return result;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+/***
+@brief
+ILADLR scans a matrix for its last non-zero row.
+
+*/
+int iladlr(int m, int n, double* pA, int lda)
+{
+	double zero = 0.0;
+	int i, j;
+	int result;
+
+	MData a(m, lda);
+	a.setData(pA);
+
+	//Quick test for the common case where one corner is non - zero.
+	if (m == 0) {
+		result = m;
+	}
+	else if ((a(m, 0) != zero) || (a(m, n) != zero)) {
+		result = m;
+	}
+	else {
+		// Scan up each column tracking the last zero row seen.
+		result = 0;
+		for (j = 0; j < n; j++) {
+			i = m - 1;
+			do {
+				i = i - 1;
+			} while ((a(std::max(i, 0), j) == zero) && (i >= 0));
+			result = std::max(result, i);
+		}
+	}
+	return result;
+}
+
 
 // Assistant Methods
 
@@ -713,8 +939,8 @@ void showMatrix_d(double* data, int m, int k)
 	{
 		return;
 	}
-	for (int i = 0; i<min(m, 6); i++) {
-		for (int j = 0; j<min(k, 6); j++) {
+	for (int i = 0; i<std::min(m, 6); i++) {
+		for (int j = 0; j< std::min(k, 6); j++) {
 			printf("%12.5G", data[j + i*k]);
 		}
 		printf("\n");
