@@ -12,6 +12,14 @@
 //#define min(x,y) (((x) < (y)) ? (x) : (y))
 //#define max(x,y) (((x) > (y)) ? (x) : (y)) 
 
+extern double cblas_dnrm2(const int N, const double *X, const int incX);
+extern void cblas_dscal(const int N, const double DA, double *DX, const int INCX);
+extern int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* pA, int LDA,
+	double* X, int INCX, double BETA, double* Y, int INCY);
+extern int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
+	int INCY, double* A, int LDA);
+
+
 #if defined(DBL_MAX)
 #define _MAX_DOUBLE_  DBL_MAX
 #else
@@ -24,10 +32,7 @@
 #define _MIN_DOUBLE_  2.22507385850720200e-308
 #endif
 
-
-
-
-
+ 
 double sign(double A, double B)
 {
 	if (B >= 0)
@@ -147,7 +152,7 @@ double dlamc3(double A, double B)
 
 \param[in] INCX: int, storage spacing between elements of DX
 */
-double idamax(int n, double* dx, int incx)
+double cblas_idamax(int n, double* dx, int incx)
 {
 	double dmax;
 	int i, ix;
@@ -634,7 +639,7 @@ void xerbla(const char* SRNAME, int INFO)
 {
 	//	std::cout << "CBLAS: On entry to " << SRNAME << " parameter number " << INFO
 	//	<< " had an illegal value" << std::endl;
-	printf("CBLAS: On entry to  %s parameter number %d had an illegal value.", SRNAME, INFO);
+	printf("CBLAS: On entry to %s parameter number %i had an illegal value. \n", SRNAME, INFO);
 	return;
 }
 
@@ -642,7 +647,7 @@ void cblas_xerbla(const char* SRNAME, int INFO)
 {
 	//	std::cout << "CBLAS: On entry to " << SRNAME << " parameter number " << INFO
 	//	<< " had an illegal value" << std::endl;
-	printf("CBLAS: On entry to  %s parameter number %c had an illegal value.", SRNAME, INFO);
+	printf("CBLAS: On entry to %s parameter number %i had an illegal value.\n", SRNAME, INFO);
 	return;
 }
 
@@ -706,8 +711,7 @@ Problem dimensions for the subroutine NAME; these may not all
 
 @return 
       >= 0: the value of the parameter specified by ISPEC
-      < 0:  if ILAENV = -k, the k-th argument had an illegal value.
-
+      < 0:  if ILAENV = -k, the k-th argument had an illegal value. 
 */
 int ilaenv(int ispec, const char* name, char OPTS, int N1, int N2, int N3, int N4)
 {
@@ -880,7 +884,8 @@ int iladlc(int m, int n, double* pA, int lda)
 /***
 @brief
 ILADLR scans a matrix for its last non-zero row.
-
+@result:  -1 -- all the entries of the matrix are ZERO.
+  0 -- only the first row is non-zero row. 
 */
 int iladlr(int m, int n, double* pA, int lda)
 {
@@ -888,8 +893,7 @@ int iladlr(int m, int n, double* pA, int lda)
 	int i, j;
 	int result;
 
-	MData a(m, lda);
-	a.setData(pA);
+	MData a(m, n, pA, lda);
 
 	//Quick test for the common case where one corner is non - zero.
 	if (m == 0) {
@@ -900,12 +904,16 @@ int iladlr(int m, int n, double* pA, int lda)
 	}
 	else {
 		// Scan up each column tracking the last zero row seen.
-		result = 0;
+		result = -1;
 		for (j = 0; j < n; j++) {
 			i = m - 1;
-			do {
+			//do {
+			//	i = i - 1;
+			//} while ((a(std::max(i, 0), j) == zero) && (i >= 0));
+			while ((a(std::max(i, 0), j) == zero) && (i >= 0))
+			{
 				i = i - 1;
-			} while ((a(std::max(i, 0), j) == zero) && (i >= 0));
+			} 
 			result = std::max(result, i);
 		}
 	}
@@ -914,7 +922,11 @@ int iladlr(int m, int n, double* pA, int lda)
 
 
 // Assistant Methods
-
+/***
+  @brief Show vector 
+  @param[in] data: double*, data pointer 
+  @param[in] m: int, vector dimension 
+*/
 void showVector_d(double* data, int m)
 {
 	if (NULL == data)
@@ -933,6 +945,13 @@ void showVector_d(double* data, int m)
 	printf("\n");
 }
 
+
+/***
+  @brief Show matrix
+  @param[in] data: double*, data pointer
+  @param[in] m: int, matrix column number 
+  @param[in] k: int, matrix row number
+*/
 void showMatrix_d(double* data, int m, int k)
 {
 	if (NULL == data)
@@ -946,3 +965,45 @@ void showMatrix_d(double* data, int m, int k)
 		printf("\n");
 	}
 }
+
+
+/***
+@brief
+ILADLR scans a matrix for its last non-zero row.
+@result:  0 -- all the entries of the matrix are ZERO.
+  1 -- only the first row is non-zero row.
+*/
+int cblas_iladlr(int m, int n, double* pA, int lda)
+{
+	double zero = 0.0;
+	int i, j;
+	int result = -1;
+
+	MData a(m, n, pA, lda);
+
+	//Quick test for the common case where one corner is non - zero.
+	if (m < 0) {
+		result = -1;
+	}
+	else if ((a(m - 1, 0) != zero) || (a(m - 1, n - 1) != zero)) {
+		result = m - 1;
+	}
+	else {
+		// Scan up each column tracking the last zero row seen.
+		result = -1;
+		for (j = 0; j < n; j++) {
+			i = m - 1;
+			//do {
+			//	i = i - 1;
+			//} while ((a(std::max(i, 0), j) == zero) && (i >= 0));
+			while ((a(std::max(i, 0), j) == zero) && (i >= 0))
+			{
+				i = i - 1;
+			}
+			result = std::max(result, i);
+		}
+	}
+	return result + 1;
+}
+
+

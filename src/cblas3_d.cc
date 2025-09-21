@@ -1,12 +1,21 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <cmath>
 #include "cblas.h"
 #include <algorithm>
 #include "mdata.h"
 
 //#define min(x,y) (((x) < (y)) ? (x) : (y))
 //#define max(x,y) (((x) > (y)) ? (x) : (y)) 
+
+extern double cblas_idamax(int n, double* dx, int incx);
+extern double dlamch(const char* CMACH);
+extern int ilaenv(int ispec, const char* name, char OPTS, int N1, int N2, int N3, int N4);
+extern bool cblas_lsame(char CA, char CB);
+extern void cblas_xerbla(const char* SRNAME, int INFO);
+extern void cblas_dscal(const int N, const double DA, double *DX, const int INCX);
+extern void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int incx); 
 
 //==============================================================
 // Level 3
@@ -245,14 +254,14 @@ void cblas_dgemm(char transa, char transb, int m, int n, int k,
 		return;
 	}
 
-	MData a(m, lda);
-	a.setData(pA);
+	MData a(m, lda, pA, lda);
+	//a.setData(pA);
 
-	MData b(k, ldb);
-	b.setData(pB);
+	MData b(k, ldb, pB, ldb);
+	//b.setData(pB);
 
-	MData c(m, ldc);
-	c.setData(pC);
+	MData c(m, ldc, pC, ldc);
+	//c.setData(pC);
 
 	/*
 	And if alpha is 0.0.
@@ -620,11 +629,11 @@ void cblas_dtrmm(char side, char uplo, char transa, char diag, int m, int n,
 		return;
 	}
 
-	MData a(nrowa, lda);
-	a.setData(pA);
+	MData a(nrowa, lda, pA, lda);
+	//a.setData(pA);
 
-	MData b(m, ldb);
-	b.setData(pB);
+	MData b(m, ldb, pB, ldb);
+	//b.setData(pB);
 
 	/*
 	  And when alpha is 0.0.
@@ -1066,12 +1075,12 @@ void cblas_dtrsm(char side, char uplo, char transa, char diag, int m, int n,
 		return;
 	}
 
-	MData a(nrowa, lda);
-	a.setData(pA);
+	MData a(nrowa, lda, pA, lda);
+	//a.setData(pA);
 
 
-	MData b(m, ldb);
-	b.setData(pB);
+	MData b(m, ldb, pB, ldb);
+	//b.setData(pB);
 
 	/*
 	  and when alpha is 0.0.
@@ -1344,351 +1353,6 @@ void cblas_dtrsm(char side, char uplo, char transa, char diag, int m, int n,
 
 
 
-/***
-=========== DOCUMENTATION ===========
-*
-* Online html documentation available at
-*            http://www.netlib.org/lapack/explore-html/
-*
-*  Definition:
-*  ===========
-*
-*       RECURSIVE SUBROUTINE DGETRF2( M, N, A, LDA, IPIV, INFO )
-*
-*       .. Scalar Arguments ..
-*       int            INFO, LDA, M, N
-*       ..
-*       .. Array Arguments ..
-*       int            IPIV( * )
-*       DOUBLE PRECISION   A( LDA, * )
-*       ..
-*
-*
-@brief Purpose:
-=============
-
-\verbatim
-
-DGETRF2 computes an LU factorization of a general M-by-N matrix A
-using partial pivoting with row interchanges.
-
-The factorization has the form
-A = P * L * U
-where P is a permutation matrix, L is lower triangular with unit
-diagonal elements (lower trapezoidal if m > n), and U is upper
-triangular (upper trapezoidal if m < n).
-
-This is the recursive version of the algorithm. It divides
-the matrix into four submatrices:
-
-[  A11 | A12  ]
-[ -----|----- ] = A
-[  A21 | A22  ]
-where A11 is n1 by n1 and A22 is n2 by n2
-with n1 = min(m,n)/2, n2 = n-n1
-
-The subroutine calls itself to factor
-[ A11 ]
-[ --- ],
-[ A12 ]
-
-do the swaps on
-[ A12 ]
-[ --- ], solve A12, update A22,
-[ A22 ]
-
-then calls itself to factor A22 and do the swaps on A21.
-
-\endverbatim
-*
-*  Arguments:
-*  ==========
-*
-\param[in] M: int
-The number of rows of the matrix A.  M >= 0.
-
-\param[in] N: int
-The number of columns of the matrix A.  N >= 0.
-
-\param[in,out] A
-A is double array, dimension (LDA,N)
-On entry, the M-by-N matrix to be factored.
-On exit, the factors L and U from the factorization
-A = P*L*U; the unit diagonal elements of L are not stored.
-
-\param[in] LDA: int
-The leading dimension of the array A.  LDA >= max(1,M).
-
-\param[out] IPIV: IPIV is int array, dimension (min(M,N))
-The pivot indices; for 1 <= i <= min(M,N), row i of the
-matrix was interchanged with row IPIV(i).
-
-\param[out] INFO: int
-= 0:  successful exit
-< 0:  if INFO = -i, the i-th argument had an illegal value
-> 0:  if INFO = i, U(i,i) is exactly zero. The factorization
-has been completed, but the factor U is exactly
-singular, and division by zero will occur if it is used
-to solve a system of equations.
-*
-*  Authors:
-*  ========
-*
-\author Univ. of Tennessee
-\author Univ. of California Berkeley
-\author Univ. of Colorado Denver
-\author NAG Ltd.
-*
-\ingroup doubleGEcomputational
-*
-*  =====================================================================
-RECURSIVE SUBROUTINE dgetrf2( M, N, A, LDA, IPIV, INFO )
-*
-*  -- LAPACK computational routine --
-*  =====================================================================
-********/
-void dgetrf2(int m, int n, double* pA, int LDA, int* ipiv, int INFO)
-{
-	// Local variables
-	double ZERO = 0.0;
-	double ONE = 1.0;
-	int  n1, n2, i;
-	int iinfo = 0;
-	double sfmin, temp;
-
-	// Test the input parameters
-	INFO = 0;
-	if (m < 0) {
-		INFO = -1;
-	}
-	else if (n < 0) {
-		INFO = -2;
-	}
-	else if (LDA < std::max(1, n)) {
-		INFO = -4;
-	}
-	if (INFO != 0) {
-		// Show the error code
-		cblas_xerbla("DGETRF2", -INFO);
-		return;
-	}
-	//Quick return if possible 
-	if (m == 0 || n == 0)
-	{
-		return;
-	}
-
-	MData A(m, LDA);
-	A.setData(pA);
-
-	if (m == 1) {
-		//  Use unblocked code for one row case
-		//  Just need to handle IPIV and INFO 
-		ipiv[0] = 1;
-		if (A[0][0] == ZERO) {
-			INFO = 1;
-		}
-	}
-	else if (n == 1) {
-		//  Use unblocked code for one column case 
-
-		// Compute machine safe minimum 
-		sfmin = dlamch("S");
-		// Find pivot and test for singularity 
-		i = idamax(m, pA, 1);
-		ipiv[0] = i;
-		if (A[i][0] != ZERO) {
-			// Apply the interchange 
-			if (i != 0) {
-				temp = A[0][0];
-				A[0][0] = A[i][0];
-				A[i][0] = temp;
-			}
-
-			// Debug -- BEGIN --
-			A.show();
-			// Debug -- END --
-
-
-			// Compute elements 1:M-1 of the column 
-			if (fabs(A[0][0]) >= sfmin) {
-				cblas_dscal(m - 1, ONE / A[0][0], pA + (1 * LDA), LDA);
-			}
-			else {
-				for (int i = 1; i < m; i++)
-				{
-					A[i][0] = A[i][0] / A[0][0];
-				}
-			}
-		}
-		else {
-			INFO = 1;
-		}
-	}
-	else {
-		// Block code 
-		//  Use recursive code 
-		n1 = std::min(m, n) / 2;
-		n2 = n - n1;
-		//
-		//        [ A11 ]
-		// Factor [ --- ]
-		//        [ A21 ]
-		//
-		dgetrf2(m, n1, pA, LDA, ipiv, iinfo);
-
-		if (INFO == 0 & iinfo > 0)
-		{
-			INFO = iinfo;
-		}
-		//
-		//                              [ A12 ]
-		//        Apply interchanges to [ --- ]
-		//                              [ A22 ]
-		//
-		cblas_dlaswp(n2, A[n1], LDA, 1, n1, ipiv, 1);
-		//
-		//        Solve A12
-		//
-		cblas_dtrsm('L', 'L', 'N', 'U', n1, n2, ONE, pA, LDA, A.sub(0, n1), LDA);
-		//
-		//        Update A22
-		//
-		cblas_dgemm('N', 'N', m - n1, n2, n1, -ONE, A.sub(n1, 0), LDA, A.sub(0, n1), LDA, ONE, A.sub(n1, n1), LDA);
-		//
-		//        Factor A22
-		//
-		dgetrf2(m - n1, n2, A.sub(n1, n1), LDA, ipiv + n1, iinfo);
-		//
-		//        Adjust INFO and the pivot indices
-		//
-		if ((INFO == 0) && (iinfo > 0))
-		{
-			INFO = iinfo + n1;
-		}
-		for (int i = n1; i < std::min(m, n); i++) {
-			ipiv[i] = ipiv[i] + n1;
-		}
-		//
-		//        Apply interchanges to A21
-		//
-		cblas_dlaswp(n1, pA, LDA, n1 + 1, std::min(m, n), ipiv, 1);
-
-	}
-	return;
-
-}
-
-
-
-void cblas_dgetrf(int m, int n, double* pA, int lda, int* ipiv, int info)
-{
-	// Temperate variables 
-	double one = 1.0;
-	int i, iinfo, j, jb, nb;
-
-	iinfo = 0;
-
-	/*
-	*Test the input parameters.
-	*/
-	info = 0;
-	if (m < 0) {
-		info = -1;
-	}
-	else if (n < 0) {
-		info = -2;
-	}
-	else if (lda < std::max(1, m)) {
-		info = -4;
-	}
-	if (info != 0) {
-		//xerbla("DGETRF", -info);
-		return;
-	}
-
-	/*
-	*  Quick return if possible
-	*/
-	if ((m == 0) || (n == 0))
-	{
-		return;
-	}
-
-	MData a(m, lda);
-	a.setData(pA);
-
-
-	/*
-	*     Determine the block size for this environment.
-	*/
-	nb = ilaenv(1, "DGETRF", ' ', m, n, -1, -1);
-
-	if ((nb <= 1) || (nb >= std::min(m, n))) {
-		/*
-		* Use unblocked code.
-		*/
-		dgetrf2(m, n, pA, lda, ipiv, info);
-	}
-	else {
-		/*
-		*  Use blocked code.
-		*/
-		for (j = 0; j < std::min(m, n); j += nb)
-		{
-			jb = std::min(std::min(m, n) - j + 1, nb);
-
-			/*
-			*    Factor diagonal and subdiagonal blocks and test for exact
-			*    singularity.
-			*/
-			dgetrf2(m - j, jb, a.sub(j, j), lda, ipiv + j, iinfo);
-
-			/*
-			*   Adjust INFO and the pivot indices.
-			*/
-			if ((info == 0) && (iinfo > 0))
-			{
-				info = iinfo + j - 1;
-			}
-			for (i = j; i < std::min(m, j + jb - 1); i++)
-			{
-				ipiv[i] = j - 1 + ipiv[i];
-			}
-
-			/*
-			*   Apply interchanges to columns 1:J-1.
-			*/
-			cblas_dlaswp(j - 1, pA, lda, j, j + jb - 1, ipiv, 1);
-
-			if ((j + jb) <= n)
-			{
-				/*
-				*   Apply interchanges to columns J+JB:N.
-				*/
-				cblas_dlaswp(n - j - jb + 1, a.sub(0, j + jb), lda, j, j + jb - 1, ipiv, 1);
-
-				/*
-				*   Compute block row of U.
-				*/
-				cblas_dtrsm('L', 'L', 'N', 'U', jb,
-					n - j - jb + 1, one, a.sub(j, j), lda, a.sub(j, j + jb),
-					lda);
-
-				if ((j + jb) <= m)
-				{
-					/*
-					*  Update trailing submatrix.
-					*/
-					cblas_dgemm('N', 'N', m - j - jb + 1,
-						n - j - jb + 1, jb, -one, a.sub(j + jb, j), lda,
-						a.sub(j, j + jb), lda, one, a.sub(j + jb, j + jb),
-						lda);
-				}
-			}
-		}
-	}
-}
 
 
 /**
@@ -1939,19 +1603,22 @@ A = [ -----|----- ]  with n1 = n/2
 The subroutine calls itself to factor A11. Update and scale A21
 or A12, update A22 then calls itself to factor A22.
 */
-void cblas_dpotrf2(char uplo, int 	n, double *A, int lda, int info)
+void cblas_dpotrf2(char uplo, int n, double* A, int lda, int info)
 {
-	double ONE = 1.0;
-	double ZERO = 0.0;
+	double one = 1.0;
+	double zero = 0.0;
 
 	int i, j, nb;
 	int jb;
+	int n1, n2;
+	int iinfo = 0;
 	/*
 	*     Test the input parameters
 	*/
 	info = 0;
 	bool upper = cblas_lsame(uplo, 'U');
-	if (!upper &  !cblas_lsame(uplo, 'L')) {
+
+	if (!upper & !cblas_lsame(uplo, 'L')) {
 		info = -1;
 	}
 	else if (n < 0) {
@@ -1961,22 +1628,155 @@ void cblas_dpotrf2(char uplo, int 	n, double *A, int lda, int info)
 		info = -4;
 	}
 	if (info != 0) {
-		xerbla("DPOTRF2", -info);
+		cblas_xerbla("DPOTRF2", -info);
+		return;
+	}
+
+	MData a(n, n, A, lda);
+	//a.show();
+
+	/*
+	*     Quick return if possible
+	*/
+	if (n == 0) {
+		return;
+	}
+	/*
+	* N = 1 case
+	*/
+	if (n == 1) {
+		/*
+		* Test for non - positive - definiteness
+		*/
+		if ((a[0][0] <= zero) || std::isnan(a[0][0])) {
+			info = 1;
+			return;
+		}
+		/*
+		* Factor
+		*/
+		a[0][0] = sqrt(a[0][0]);
+	}
+	else {
+		/*
+		*Use recursive code
+		*/
+		n1 = n / 2;
+		n2 = n - n1;
+		/*
+		*Factor A11
+		*/
+		cblas_dpotrf2(uplo, n1, A, lda, iinfo);
+		if (iinfo != 0) {
+			info = iinfo;
+			return;
+		}
+
+		//
+		//a.show();
+		//
+
+
+		/*
+		*Compute the Cholesky factorization A = U * *T * U
+		*/
+		if (upper) {
+			/*
+			* Updateand scale A12
+			*/
+			cblas_dtrsm('L', 'U', 'T', 'N', n1, n2, one, A, lda, a.sub(0, n1), lda);
+
+			//
+			//a.show();
+			//
+
+
+
+			/*
+			*Update and factor A22
+			*/
+			cblas_dsyrk(uplo, 'T', n2, n1, -one, a.sub(0, n1), lda, one, a.sub(n1, n1), lda);
+
+			//
+			//a.show();
+			//
+
+
+			cblas_dpotrf2(uplo, n2, a.sub(n1, n1), lda, iinfo);
+
+			if (iinfo != 0) {
+				info = iinfo + n1;
+				return;
+			}
+		}
+		else {
+			/*
+			*Compute the Cholesky factorization A = L * L * *T
+			*/
+
+			/*
+			*Update and scale A21
+			*/
+			cblas_dtrsm('R', 'L', 'T', 'N', n2, n1, one, A, lda, a.sub(n1, 0), lda);
+
+			/*
+			*Update and factor A22
+			*/
+			cblas_dsyrk(uplo, 'N', n2, n1, -one, a.sub(n1, 0), lda, one, a.sub(n1, n1), lda);
+			cblas_dpotrf2(uplo, n2, a.sub(n1, n1), lda, iinfo);
+
+			if (iinfo != 0) {
+				info = iinfo + n1;
+				return;
+			}
+		}
+	}
+}
+
+
+void cblas_dpotrf(char uplo, int n, double* A, int lda, int info)
+{
+	double ONE = 1.0;
+	double ZERO = 0.0;
+
+	int i, j, nb;
+	int jb;
+
+	j = 0;
+	/*
+	*     Test the input parameters
+	*/
+	info = 0;
+	bool upper = cblas_lsame(uplo, 'U');
+
+	if (!upper & !cblas_lsame(uplo, 'L')) {
+		info = -1;
+	}
+	else if (n < 0) {
+		info = -2;
+	}
+	else if (lda < std::max(1, n)) {
+		info = -4;
+	}
+	if (info != 0) {
+		cblas_xerbla("DPOTRF", -info);
 		return;
 	}
 
 	/*
 	*     Quick return if possible
 	*/
-	if (n != 0) {
+	if (n == 0) {
 		return;
 	}
+
+	MData a(n, n, A, lda);
+	//a.setData(A);
 
 	/*
 	*     Determine the block size for this environment.
 	*/
 	nb = ilaenv(1, "DPOTRF", uplo, n, -1, -1, -1);
-
 	if ((nb <= 1) || (nb >= n)) {
 		/*
 		* Use unblocked code.
@@ -2012,6 +1812,7 @@ void cblas_dpotrf2(char uplo, int 	n, double *A, int lda, int info)
 			}
 		}
 		else {
+
 			/*
 			* Compute the Cholesky factorization A = L*L**T.
 			*/
@@ -2030,13 +1831,14 @@ void cblas_dpotrf2(char uplo, int 	n, double *A, int lda, int info)
 					/*
 					* Compute the current block column.
 					*/
-					cblas_dgemm('N', 'T', n - j - jb + 1, jb, j - 1, -ONE, &A[(j + jb)*lda + 1], lda, &A[j * lda + 1], lda, ONE, &A[(j + jb) * lda + j], lda);
-					cblas_dtrsm('R', 'L', 'T', 'N', n - j - jb + 1, jb, ONE, &A[j * lda + j], lda, &A[(j + jb)*lda + j], lda);
+					cblas_dgemm('N', 'T', n - j - jb + 1, jb, j - 1, -ONE, &A[(j + jb) * lda + 1], lda, &A[j * lda + 1], lda, ONE, &A[(j + jb) * lda + j], lda);
+					cblas_dtrsm('R', 'L', 'T', 'N', n - j - jb + 1, jb, ONE, &A[j * lda + j], lda, &A[(j + jb) * lda + j], lda);
 				}
 			}
+
 		}
 	}
-	goto MARK40;
+
 MARK30:
 	info = info + j - 1;
 
@@ -2045,3 +1847,119 @@ MARK40:
 }
 
 
+
+
+
+//
+//
+//{
+//	double ONE = 1.0;
+//	double ZERO = 0.0;
+//
+//	int i, j, nb;
+//	int jb;
+//	/*
+//	*     Test the input parameters
+//	*/
+//	info = 0;
+//	bool upper = cblas_lsame(uplo, 'U');
+//	if (!upper &  !cblas_lsame(uplo, 'L')) {
+//		info = -1;
+//	}
+//	else if (n < 0) {
+//		info = -2;
+//	}
+//	else if (lda < std::max(1, n)) {
+//		info = -4;
+//	}
+//	if (info != 0) {
+//		xerbla("DPOTRF2", -info);
+//		return;
+//	}
+//
+//	/*
+//	*     Quick return if possible
+//	*/
+//	if (n == 0) {
+//		return;
+//	}
+//
+//	/*
+//	*     Determine the block size for this environment.
+//	*/
+//	nb = ilaenv(1, "DPOTRF", uplo, n, -1, -1, -1);
+//
+//
+//	//  DEBUG -- BEGIN --
+//	std::cout << "DPOTRF2: nb = " << nb << std::endl;
+//	//  DEBUG -- END --
+//
+//
+//	if ((nb <= 1) || (nb >= n)) {
+//		/*
+//		* Use unblocked code.
+//		*/
+//		cblas_dpotrf2(uplo, n, A, lda, info);
+//	}
+//	else {
+//		/*
+//		* Use blocked code.
+//		*/
+//		if (upper) {
+//			/*
+//			* Compute the Cholesky factorization A = U**T*U.
+//			*/
+//			for (j = 0; j < n; j += nb) {
+//				/*
+//				*  Update and factorize the current diagonal block and test
+//				*  for non - positive - definiteness.
+//				*/
+//				jb = std::min(nb, n - j + 1);
+//				cblas_dsyrk('U', 'T', jb, j - 1, -ONE, &A[1 * lda + j], lda, ONE, &A[j * lda + j], lda);
+//				cblas_dpotrf2('U', jb, &A[j * lda + j], lda, info);
+//				if (info != 0) {
+//					goto MARK30;
+//				}
+//				if ((j + jb) <= n) {
+//					/*
+//					*  Compute the current block row.
+//					*/
+//					cblas_dgemm('T', 'N', jb, n - j - jb + 1, j - 1, -ONE, &A[1 * lda + j], lda, &A[1 * lda + j + jb], lda, ONE, &A[j * lda + j + jb], lda);
+//					cblas_dtrsm('L', 'U', 'T', 'N', jb, n - j - jb + 1, ONE, &A[j * lda + j], lda, &A[j * lda + j + jb], lda);
+//				}
+//			}
+//		}
+//		else {
+//			/*
+//			* Compute the Cholesky factorization A = L*L**T.
+//			*/
+//			for (j = 0; j < n; j += nb) {
+//				/*
+//				* Update and factorize the current diagonal block and test
+//				* for non - positive - definiteness.
+//				*/
+//				jb = std::min(nb, n - j + 1);
+//				cblas_dsyrk('L', 'N', jb, j - 1, -ONE, &A[j * lda + 1], lda, ONE, &A[j * lda + j], lda);
+//				cblas_dpotrf2('L', jb, &A[j * lda + j], lda, info);
+//				if (info != 0) {
+//					goto MARK30;
+//				}
+//				if ((j + jb) <= n) {
+//					/*
+//					* Compute the current block column.
+//					*/
+//					cblas_dgemm('N', 'T', n - j - jb + 1, jb, j - 1, -ONE, &A[(j + jb)*lda + 1], lda, &A[j * lda + 1], lda, ONE, &A[(j + jb) * lda + j], lda);
+//					cblas_dtrsm('R', 'L', 'T', 'N', n - j - jb + 1, jb, ONE, &A[j * lda + j], lda, &A[(j + jb)*lda + j], lda);
+//				}
+//			}
+//		}
+//	}
+//	goto MARK40;
+//MARK30:
+//	info = info + j - 1;
+//
+//MARK40:
+//	return;
+//}
+//
+//

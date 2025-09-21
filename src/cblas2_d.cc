@@ -3,6 +3,13 @@
 #include "math.h" 
 #include "mdata.h"
 
+extern void showMatrix_d(double* data, int m, int k);
+extern void cblas_xerbla(const char* SRNAME, int INFO);
+extern bool cblas_lsame(char CA, char CB);
+extern void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int incx); 
+extern void cblas_dtrsm(char side, char uplo, char transa, char diag, int m, int n,
+	double alpha, double* pA, int lda, double* pB, int ldb);
+extern void cblas_dgetrf(int m, int n, double* pA, int lda, int* ipiv, int& info); 
 //==============================================================
 // Level 2
 
@@ -13,7 +20,7 @@ SGER computes A := alpha*x*y' + A.
 
 Discussion:
 
-SGER performs the rank 1 operation
+DGER performs the rank 1 operation
 
 A := alpha*x*y' + A,
 
@@ -136,10 +143,12 @@ int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
 		{
 			if (X[I] != ZERO)
 			{
+				JY = 0;
 				TEMP = ALPHA * X[I];
 				for (J = 0; J < N; J = J + INCY)
 				{
-					A[(I)* LDA + (J)] = A[(I)* LDA + (J)] + Y[J] * TEMP;
+					A[(I)*LDA + (J)] = A[(I)*LDA + (J)] + Y[JY] * TEMP;
+					JY += INCY;
 				}
 			}
 			//JY = JY + INCY;
@@ -147,16 +156,20 @@ int cblas_dger(int M, int N, double ALPHA, double* X, int INCX, double* Y,
 	}
 	else
 	{
-		for (I = 0; I < M; I += INCX)
+		IX = 0;
+		for (I = 0; I < M; I++)
 		{
-			if (X[I] != ZERO)
+			if (X[IX] != ZERO)
 			{
-				TEMP = ALPHA * X[I];
-				for (J = 0; J < N; J = J + INCY)
+				JY = 0;
+				TEMP = ALPHA * X[IX];
+				for (J = 0; J < N; J++)
 				{
-					A[(I)* LDA + (J)] = A[(I)* LDA + (J)] + Y[J] * TEMP;
+					A[(I)*LDA + (J)] = A[(I)*LDA + (J)] + Y[JY] * TEMP;
+					JY += INCY;
 				}
 			}
+			IX += INCX;
 		}
 	}
 	// Row Prinary Order -- END -- 
@@ -322,8 +335,8 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* pA, int LDA,
 		return 0;
 	}
 
-	MData A(M, LDA);
-	A.setData(pA);
+	MData A(M, LDA, pA, LDA);
+	//A.setData(pA);
 
 	if (cblas_lsame(TRANS, 'N'))
 	{
@@ -547,8 +560,8 @@ void cblas_dtrmv(char uplo, char trans, char diag, int n, double a[], int lda,
 		kx = 0;
 	}
 
-	MData A(n, lda);
-	A.setData(a);
+	MData A(n, lda, a, lda);
+	//A.setData(a);
 
 	//
 	//  Start the operations. In this version the elements of A are
@@ -863,8 +876,8 @@ void cblas_dtrsv(char uplo, char trans, char diag, int n, double* pA, int lda, d
 		kx = 1;
 	}
 
-	MData a(n, lda);
-	a.setData(pA);
+	MData a(n, lda, pA, lda);
+	//a.setData(pA);
 
 
 	/*
@@ -998,8 +1011,7 @@ void cblas_dtrsv(char uplo, char trans, char diag, int n, double* pA, int lda, d
 					x[jx] = temp;
 					jx = jx + incx;
 				}
-			}
-
+			} 
 		}
 		else {
 			if (incx == 1) {
@@ -1041,3 +1053,4 @@ void cblas_dtrsv(char uplo, char trans, char diag, int n, double* pA, int lda, d
 	}
 }
 
+ 

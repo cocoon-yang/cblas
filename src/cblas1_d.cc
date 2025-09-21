@@ -9,6 +9,8 @@
 #include "math.h" 
 #include "mdata.h"
 
+ 
+
 //==============================================================
 // Level 1
 
@@ -158,15 +160,15 @@ void cblas_drot(const int N, double *DX, const int INCX, double *DY,
 		*       code for unequal increments or equal increments not equal
 		*         to 1
 		*/
-		IX = 1;
-		IY = 1;
+		IX = 0;
+		IY = 0;
 		if (INCX < 0)
 		{
-			IX = (-N + 1) * INCX + 1;
+			IX = (-N + 1) * INCX ;
 		}
 		if (INCY < 0)
 		{
-			IY = (-N + 1) * INCY + 1;
+			IY = (-N + 1) * INCY ;
 		}
 		for (I = 0; I < N; I++)
 		{
@@ -190,86 +192,154 @@ void cblas_drot(const int N, double *DX, const int INCX, double *DY,
 	return;
 }
 
-void cblas_drotg(double* DA, double* DB, double C, double S)
+/**
+ * @brief
+   The computation uses the formulas
+	  sigma = sgn(a)    if |a| >  |b|
+			= sgn(b)    if |b| >= |a|
+	  r = sigma*sqrt( a**2 + b**2 )
+	  c = 1; s = 0      if r = 0
+	  c = a/r; s = b/r  if r != 0
+   The subroutine also computes
+	  z = s    if |a| > |b|,
+		= 1/c  if |b| >= |a| and c != 0
+		= 1    if c = 0
+   This allows c and s to be reconstructed from z as follows:
+	  If z = 1, set c = 0, s = 1.
+	  If |z| < 1, set c = sqrt(1 - z**2) and s = z.
+	  If |z| > 1, set c = 1/z and s = sqrt( 1 - c**2).
+ * @param DA
+ * @param DB
+ * @param C
+ * @param S
+ * @return
+*/
+void cblas_drotg(double& a, double& b, double& c, double& s)
 {
-	//    DOUBLE PRECISION R,ROE,SCALE,Z
-	double R, ROE, SCALE, Z;
+	double one = 1.0;
+	double zero = 0.0;
+	double anorm, bnorm; 
+	double r, z;
+	double sigma, scl;
 
-
-	//    ROE = DB
-	ROE = *DB;
-
-	//    IF (DABS(DA).GT.DABS(DB)) ROE = DA
-	//    SCALE = DABS(DA) + DABS(DB)
-
-	if (fabs(*DA) > fabs(*DB))
-	{
-		ROE = *DA;
+	anorm = fabs(a);
+	bnorm = fabs(b);
+	if (bnorm == zero) {
+		c = one;
+		s = zero;
+		b = zero;
 	}
-
-	//    IF (SCALE.NE.0.0d0) GO TO 10
-
-	if (SCALE != 0)
-	{
-		goto Lab_10;
+	else if (anorm == zero) {
+		c = zero;
+		s = one;
+		a = b;
+		b = one;
 	}
-	//    C = 1.0d0
-	//    S = 0.0d0
-	//    R = 0.0d0
-	//    Z = 0.0d0
-
-	C = 1.0;
-	S = 0.0;
-	R = 0.0;
-	Z = 0.0;
-
-
-	//    GO TO 20
-	goto Lab_20;
-
-	// 10 R = SCALE*DSQRT((DA/SCALE)**2+ (DB/SCALE)**2)
-	//    R = DSIGN(1.0d0,ROE)*R
-	//    C = DA/R
-	//    S = DB/R
-	//    Z = 1.0d0
-	//    IF (DABS(DA).GT.DABS(DB)) Z = S
-	//    IF (DABS(DB) >= DABS(DA) .AND. C.NE.0.0d0) Z = 1.0d0/C
-
-Lab_10:
-	R = SCALE*sqrt(pow((*DA / SCALE), 2) + pow((*DB / SCALE), 2));
-	//R = DSIGN(1.0d0,ROE)*R;
-	if (ROE > 0)
-	{
-		R = fabs(R);
-	}
-	else
-	{
-		R = -fabs(R);
-	}
-
-	C = *DA / R;
-	S = *DB / R;
-	Z = 1.0;
-	if (fabs(*DA)>fabs(*DB))
-	{
-		Z = S;
-	}
-	if ((fabs(*DB) >= fabs(*DA)) && (C != 0.0))
-	{
-		Z = 1.0 / C;
-	}
-
-	// 20 DA = R
-	//    DB = Z
-	//    RETURN
-	//    END
-
-Lab_20:
-	*DA = R;
-	*DB = Z;
-
-	return;
+	else {
+		double tmp = std::max(anorm, bnorm);
+		scl = std::min(DBL_MAX, std::max(DBL_MIN, tmp));
+		if (anorm > bnorm) {
+			sigma = sign(one, a);
+		}
+		else {
+			sigma = sign(one, b);
+		}
+		r = sigma * (scl * sqrt((a / scl) * (a / scl) + (b / scl) * (b / scl))); 
+		c = a / r;
+		s = b / r; 
+		if (anorm > bnorm) {
+			z = s;
+		} 
+		else if (c != zero) {
+			z = one / c;
+		}
+		else {
+			z = one;
+		}
+		 
+		a = r;
+		b = z;
+	} 
 }
+ 
+//{
+//	//    DOUBLE PRECISION R,ROE,SCALE,Z
+//	double R, ROE, SCALE, Z;
+//	 
+//	//    ROE = DB
+//	ROE = DB;
+//
+//	//    IF (DABS(DA).GT.DABS(DB)) ROE = DA
+//	//    SCALE = DABS(DA) + DABS(DB)
+//
+//	if (fabs(DA) > fabs(DB))
+//	{
+//		ROE = DA;
+//	}
+//
+//	//    IF (SCALE.NE.0.0d0) GO TO 10
+//
+//	if (SCALE != 0)
+//	{
+//		goto Lab_10;
+//	}
+//	//    C = 1.0d0
+//	//    S = 0.0d0
+//	//    R = 0.0d0
+//	//    Z = 0.0d0
+//
+//	C = 1.0;
+//	S = 0.0;
+//	R = 0.0;
+//	Z = 0.0;
+//
+//
+//	//    GO TO 20
+//	goto Lab_20;
+//
+//	// 10 R = SCALE*DSQRT((DA/SCALE)**2+ (DB/SCALE)**2)
+//	//    R = DSIGN(1.0d0,ROE)*R
+//	//    C = DA/R
+//	//    S = DB/R
+//	//    Z = 1.0d0
+//	//    IF (DABS(DA).GT.DABS(DB)) Z = S
+//	//    IF (DABS(DB) >= DABS(DA) .AND. C.NE.0.0d0) Z = 1.0d0/C
+//
+//Lab_10:
+//	R = SCALE*sqrt(pow((DA / SCALE), 2) + pow((DB / SCALE), 2));
+//	//R = DSIGN(1.0d0,ROE)*R;
+//	if (ROE > 0)
+//	{
+//		R = fabs(R);
+//	}
+//	else
+//	{
+//		R = -fabs(R);
+//	}
+//
+//	C = DA / R;
+//	S = DB / R;
+//	Z = 1.0;
+//	if (fabs(DA)>fabs(DB))
+//	{
+//		Z = S;
+//	}
+//	if ((fabs(DB) >= fabs(DA)) && (C != 0.0))
+//	{
+//		Z = 1.0 / C;
+//	}
+//
+//	// 20 DA = R
+//	//    DB = Z
+//	//    RETURN
+//	//    END
+//
+//Lab_20:
+//	DA = R;
+//	DB = Z;
+//
+//	return;
+//}
 
 
 /*
@@ -361,7 +431,7 @@ void cblas_drotm(const int N, double *DX, const int INCX, double *DY,
 	//    IF (N.LE.0 .OR. (DFLAG+TWO.EQ.ZERO)) GO TO 140
 	//    IF (.NOT. (INCX.EQ.INCY.AND.INCX.GT.0)) GO TO 70
 
-	DFLAG = DPARAM[1];
+	DFLAG = DPARAM[0];
 	if (N <= 0 || DFLAG + TWO == ZERO)
 	{
 		goto L140;
@@ -399,10 +469,10 @@ void cblas_drotm(const int N, double *DX, const int INCX, double *DY,
 	//    DY(I) = W*DH21 + Z
 	//20 CONTINUE
 	//    GO TO 140
-L10: DH12 = DPARAM[4];
-	DH21 = DPARAM[3];
+L10: DH12 = DPARAM[3];
+	DH21 = DPARAM[2];
 
-	for (I = 1; I < NSTEPS; I += INCX)
+	for (I = 0; I < NSTEPS; I += INCX)
 	{
 		W = DX[I];
 		Z = DY[I];
@@ -422,9 +492,9 @@ L10: DH12 = DPARAM[4];
 	//    40 CONTINUE
 	//       GO TO 140
 
-L30: DH11 = DPARAM[2];
-	DH22 = DPARAM[5];
-	for (I = 1; I <= NSTEPS; I += INCX)
+L30: DH11 = DPARAM[1];
+	DH22 = DPARAM[4];
+	for (I = 0; I <= NSTEPS; I += INCX)
 	{
 		W = DX[I];
 		Z = DY[I];
@@ -447,10 +517,10 @@ L30: DH11 = DPARAM[2];
 	//	      GO TO 140
 
 L50:
-	DH11 = DPARAM[2];
-	DH12 = DPARAM[4];
-	DH21 = DPARAM[3];
-	DH22 = DPARAM[5];
+	DH11 = DPARAM[1];
+	DH12 = DPARAM[3];
+	DH21 = DPARAM[2];
+	DH22 = DPARAM[4];
 	for (I = 1; I <= NSTEPS; I += INCX)
 	{
 		W = DX[I];
@@ -468,8 +538,8 @@ L50:
 	//	      IF (INCY.LT.0) KY = 1 + (1-N)*INCY
 
 L70:
-	KX = 1;
-	KY = 1;
+	KX = 0;
+	KY = 0;
 	if (INCX < 0)
 	{
 		KX = 1 + (1 - N) * INCX;
@@ -508,8 +578,8 @@ L70:
 	//	   90 CONTINUE
 	//	      GO TO 140
 L80:
-	DH12 = DPARAM[4];
-	DH21 = DPARAM[3];
+	DH12 = DPARAM[3];
+	DH21 = DPARAM[2];
 	for (I = 1; I <= N; I++)
 	{
 		W = DX[KX];
@@ -537,8 +607,8 @@ L80:
 	//	      GO TO 140
 
 L100:
-	DH11 = DPARAM[2];
-	DH22 = DPARAM[5];
+	DH11 = DPARAM[1];
+	DH22 = DPARAM[4];
 	for (I = 1; I <= N; I++)
 	{
 		W = DX[KX];
@@ -566,10 +636,10 @@ L100:
 	//	  130 CONTINUE
 
 L120:
-	DH11 = DPARAM[2];
-	DH12 = DPARAM[4];
-	DH21 = DPARAM[3];
-	DH22 = DPARAM[5];
+	DH11 = DPARAM[1];
+	DH12 = DPARAM[3];
+	DH21 = DPARAM[2];
+	DH22 = DPARAM[4];
 	for (I = 1; I <= N; I++)
 	{
 		W = DX[KX];
@@ -601,24 +671,23 @@ void cblas_daxpy(const int N, const double DA, const double *X,
 		return;
 	}
 	//
-	//        code for unequal increments or equal increments
-	//          not equal to 1
+	// code for unequal increments or equal increments
+	// not equal to 1
 	//
 	int I;
 	if ((incX != 1) || (incY != 1))
 	{
-
-		int ix = 1;
-		int iy = 1;
+		int ix = 0;
+		int iy = 0;
 		if (incX < 0)
 		{
-			ix = (1 - N) * incX + 1;
+			ix = (1 - N) * incX;
 		}
 		if (incY < 0)
 		{
-			iy = (1 - N) * incY + 1;
+			iy = (1 - N) * incY;
 		}
-		for ( I = 0; I < N; I++)
+		for (I = 0; I < N; I++)
 		{
 			Y[iy] = Y[iy] + DA * X[ix];
 			ix = ix + incX;
@@ -627,8 +696,8 @@ void cblas_daxpy(const int N, const double DA, const double *X,
 		return;
 	}
 
-	//        code for both increments equal to 1
-	//        clean-up loop
+	//  code for both increments equal to 1
+	//  clean-up loop
 	//double dx [N];
 	//double dy [N];
 
@@ -659,28 +728,27 @@ void cblas_daxpy(const int N, const double DA, const double *X,
 
 void cblas_dcopy(const int N, const double *X, const int incX, double *Y,
 		const int incY)
-{
-
+{ 
 	if (N <= 0)
 	{
 		return;
 	}
 	//
-	//        code for unequal increments or equal increments
-	//          not equal to 1
+	// code for unequal increments or equal increments
+	//  not equal to 1
 	//
 	int i;
 	if ((incX != 1) || (incY != 1))
 	{
-		int ix = 1;
-		int iy = 1;
+		int ix = 0;
+		int iy = 0;
 		if (incX < 0)
 		{
-			ix = (1 - N) * incX + 1;
+			ix = (1 - N) * incX;
 		}
 		if (incY < 0)
 		{
-			iy = (1 - N) * incY + 1;
+			iy = (1 - N) * incY;
 		}
 		for ( i = 0; i < N; i++)
 		{
@@ -720,8 +788,7 @@ void cblas_dcopy(const int N, const double *X, const int incX, double *Y,
 		Y[i + 5] = X[i + 5];
 		Y[i + 6] = X[i + 6];
 	}
-	return;
-
+	return; 
 }
 
 
@@ -758,15 +825,15 @@ double cblas_ddot(const int N, const double *X, const int incX,
 	int i;
 	if ((incX != 1) || (incY != 1))
 	{
-		int ix = 1;
-		int iy = 1;
+		int ix = 0;
+		int iy = 0;
 		if (incX < 0)
 		{
-			ix = (1 - N) * incX + 1;
+			ix = (1 - N) * incX;
 		}
 		if (incY < 0)
 		{
-			iy = (1 - N) * incY + 1;
+			iy = (1 - N) * incY;
 		}
 		for ( i = 0; i < N; i++)
 		{
@@ -777,10 +844,10 @@ double cblas_ddot(const int N, const double *X, const int incX,
 		return result;
 	}
 	//
-	//        code for both increments equal to 1
+	// code for both increments equal to 1
 	//
 	//
-	//        clean-up loop
+	// clean-up loop
 	//
 
 	int m = (N % 5);//int m = mod(N, 5);
@@ -804,8 +871,7 @@ double cblas_ddot(const int N, const double *X, const int incX,
 				+ Y[i + 3] * X[i + 3] + Y[i + 4] * X[i + 4]);
 
 	}
-	return result;
-
+	return result; 
 }
 
 
@@ -838,16 +904,15 @@ void cblas_dscal(const int N, const double DA, double *DX, const int INCX)
 		int NINCX = N * INCX;
 		for (int I = 0; I < NINCX; I += INCX)
 		{
-			DX[I] = DA * DX[I];
-
+			DX[I] = DA * DX[I]; 
 		}
 		return;
 	}
 	/*
-	*        code for increment equal to 1
+	*  code for increment equal to 1
 	*
 	*
-	*        clean-up loop
+	*  clean-up loop
 	*/
 	int M = (N % 5);
 	if (M != 0)
@@ -967,13 +1032,13 @@ void cblas_dswap(const int N, double *DX, const int INCX, double *DY,
 		*       code for unequal increments or equal increments not equal
 		*         to 1
 		*/
-		IX = 1;
-		IY = 1;
+		IX = 0;
+		IY = 0;
 		if (INCX < 0)
-			IX = (-N + 1) * INCX + 1;
+			IX = (-N + 1) * INCX;
 		if (INCY < 0)
-			IY = (-N + 1) * INCY + 1;
-		for (I = 1; I < N; I++)
+			IY = (-N + 1) * INCY;
+		for (I = 0; I < N; I++)
 		{
 			DTEMP = DX[IX];
 			DX[IX] = DY[IY];
@@ -992,7 +1057,7 @@ void cblas_dswap(const int N, double *DX, const int INCX, double *DY,
 	M = N % 3;
 	if (M != 0)
 	{
-		for (I = 1; I < M; I++)
+		for (I = 0; I < M; I++)
 		{
 			DTEMP = DX[I];
 			DX[I] = DY[I];
@@ -1060,13 +1125,13 @@ double cblas_dnrm2(const int N, const double *X, const int incX)
 		*        auxiliary routine:
 		*        CALL DLASSQ( N, X, INCX, SCALE, SSQ )
 		*/
-		for (IX = 0; IX < (1 + (N - 1) * incX); IX += incX)
+		for (IX = 0; IX < ((N)*incX); IX += incX)
 		{
 			if (X[IX] != ZERO)
 			{
 				ABSXI = fabs(X[IX]);
 
-				if (SCALE>ABSXI)
+				if (SCALE > ABSXI)
 				{
 					SSQ = ONE + SSQ * (SCALE / ABSXI) * (SCALE / ABSXI);
 					SCALE = ABSXI;
@@ -1078,7 +1143,7 @@ double cblas_dnrm2(const int N, const double *X, const int incX)
 			}
 		}
 		NORM = SCALE * sqrt(SSQ);
-	} 
+	}
 	return NORM;
 }
 
@@ -1088,7 +1153,6 @@ double cblas_dnrm2(const int N, const double *X, const int incX)
 DLASWP performs a series of row interchanges on the matrix A.
 One row interchange is initiated for each of rows K1 through K2 of A.
 
-M: int, The number of rows of the matrix A.  M >= 0.
 N: int, The number of columns of the matrix A.  N >= 0.
 A: double*,  A is DOUBLE PRECISION array, dimension (LDA,N)
 On entry, the matrix of column dimension N to which the row
@@ -1107,12 +1171,11 @@ interchanged.
 INCX: int, The increment between successive values of IPIV. If INCX
 is negative, the pivots are applied in reverse order.
 ***/
-void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int incx)
+void cblas_dlaswp(int col, double* pA, int lda, int k1, int k2, int* ipiv, int incx)
 {
 	int  i, i1, i2, inc, ip, ix, ix0, j, k, n32;
-	double   temp;
-
-	//      ..
+	double temp; 
+ 
 	//      .. Executable Statements ..
 	// 
 	//      Interchange row I with row IPIV(K1+(I-K1)*abs(INCX)) for each of rows
@@ -1121,27 +1184,35 @@ void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int inc
 	if (incx > 0) {
 		ix0 = k1;
 		i1 = k1;
-		i2 = k2;
+		i2 = k2 + incx;
 		inc = 1;
 	}
 	else if (incx < 0) {
 		ix0 = k1 + (k1 - k2) * incx;
 		i1 = k2;
-		i2 = k1;
+		i2 = k1 + incx;
 		inc = -1;
 	}
 	else {
 		return;
 	}
+	// Get a row number cover [k1, k2] rows 
+	int row = 1; 
+	ix = ix0;
+	for (i = i1; i != i2; i += inc)
+	{
+		ip = ipiv[ix]; 
+		row = std::max(row, ip);
+		ix = ix + incx;
+	} 
+	MData a(row + 1, col, pA, lda);
 
-	MData a(lda, n);
-	a.setData(pA);
 	// 
-	n32 = (n / 32) * 32;
+	n32 = (col / 32) * 32;
 	if (n32 != 0) {
 		for (j = 0; j < n32; j += 32) {
 			ix = ix0;
-			for (i = i1; i < i2; i += inc) {
+			for (i = i1; i != i2; i += inc) {
 				ip = ipiv[ix];
 				if (ip != i) {
 					for (k = j; k < j + 31; k++) {
@@ -1154,13 +1225,15 @@ void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int inc
 			}
 		}
 	}
-	if (n32 != n) {
+	if (n32 != col) {
 		n32 = n32;
 		ix = ix0;
-		for (i = i1; i < i2; i += inc) {
+		for (i = i1; i != i2; i += inc) {
 			ip = ipiv[ix];
 			if (ip != i) {
-				for (k = n32; k < n; k++) {
+				// Iterating all elements 
+				// of the two rows
+				for (k = n32; k < col; k++) {
 					temp = a(i, k);
 					a(i, k) = a(ip, k);
 					a(ip, k) = temp;
@@ -1168,7 +1241,6 @@ void cblas_dlaswp(int n, double* pA, int lda, int k1, int k2, int* ipiv, int inc
 			}
 			ix = ix + incx;
 		}
-	}
-	// 
+	} 
 	return;
 }
