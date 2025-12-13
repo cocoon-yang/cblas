@@ -70,7 +70,7 @@ public:
 		} 
 	}
 
-	MData(const size_t row, const size_t col, double* pSource, bool Clone = false) : _col(col), _row(row), _SelfData(Clone), _pData(nullptr), _type((int)MATRIX_TYPE::GENERAL)
+	MData(const size_t row, const size_t col, double* pSource, bool Clone = false) : _col(col), _row(row), _ld(col), _SelfData(Clone), _pData(nullptr), _type((int)MATRIX_TYPE::GENERAL)
 	{
 		init(); 
 		if (_SelfData)
@@ -235,7 +235,7 @@ public:
 public:
 	void setLD(size_t val)
 	{
-		if (val < (std::max)(1, (int)_col))
+		if (val < (size_t)(std::max)(1, (int)_col))
 		{
 			std::cerr << "[ERROR] init(): ld = " << val << " is invalid." << std::endl;
 			return;
@@ -365,9 +365,9 @@ public:
 			return;
 		}
  
-		for (int i = 0; i < _row; i++)
+		for (size_t i = 0; i < _row; i++)
 		{
-			for (int j = 0; j < _col; j++)
+			for (size_t j = 0; j < _col; j++)
 			{
 				(*this)[i][j] = 0.0;
 			} 
@@ -382,9 +382,9 @@ public:
 			const auto default_precision{ std::cout.precision() };
 			std::cout.precision(3);
 			std::cout << std::endl;
-			for (int i = 0; i < _row; i++)
+			for (size_t i = 0; i < _row; i++)
 			{
-				for (int j = 0; j < _col; j++)
+				for (size_t j = 0; j < _col; j++)
 				{
 					std::cout << std::fixed << (*this)[i][j] << " ";
 				}
