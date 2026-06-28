@@ -209,7 +209,7 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* pA, int LDA,
 	{
 		INFO = 3;
 	}
-	else if (LDA < std::max(1, M))
+	else if (LDA < std::max(1, N))
 	{
 		INFO = 6;
 	}
@@ -223,7 +223,7 @@ int cblas_dgemv(char TRANS, int M, int N, double ALPHA, double* pA, int LDA,
 	}
 	if (INFO != 0)
 	{
-		//xerbla("DGEMV ", INFO);
+		xerbla("DGEMV ", INFO);
 		return 0;
 	}
 
@@ -1054,3 +1054,832 @@ void cblas_dtrsv(char uplo, char trans, char diag, int n, double* pA, int lda, d
 }
 
  
+//
+// DTPMV  performs one of the matrix-vector operations
+//
+//    x := A*x,   or   x := A**T*x,
+//
+// where x is an n element vector and  A is an n by n unit, or non-unit,
+// upper or lower triangular matrix, supplied in packed form.
+//
+//          UPLO is CHARACTER*1
+//           On entry, UPLO specifies whether the matrix is an upper or
+//           lower triangular matrix as follows:
+//
+//              UPLO = 'U' or 'u'   A is an upper triangular matrix.
+//
+//              UPLO = 'L' or 'l'   A is a lower triangular matrix.
+//
+//          AP is DOUBLE PRECISION array, dimension at least
+//           ( ( n*( n + 1 ) )/2 ).
+//           Before entry with  UPLO = 'U' or 'u', the array AP must
+//           contain the upper triangular matrix packed sequentially,
+//           column by column, so that AP( 1 ) contains a( 1, 1 ),
+//           AP( 2 ) and AP( 3 ) contain a( 1, 2 ) and a( 2, 2 )
+//           respectively, and so on.
+// 
+//   In Fortran version, when UPLO = 'U', the upper triangle matrix
+//  [ a0, a1, a3, a6, ]
+//  [     a2, a4, a7, ]
+//  [         a5, a8, ]
+//  [             a9  ]  
+// 
+//  
+//           Before entry with UPLO = 'L' or 'l', the array AP must
+//           contain the lower triangular matrix packed sequentially,
+//           column by column, so that AP( 1 ) contains a( 1, 1 ),
+//           AP( 2 ) and AP( 3 ) contain a( 2, 1 ) and a( 3, 1 )
+//           respectively, and so on.
+// 
+// 
+//   In Fortran version, when UPLO = 'L', the lower triangle matrix
+//  [ a0,            ]
+//  [ a1, a4,        ]
+//  [ a2, a5, a7,    ]
+//  [ a3, a6, a8, a9 ]  
+// 
+//           Note that when  DIAG = 'U' or 'u', the diagonal elements of
+//           A are not referenced, but are assumed to be unity.
+//
+void cblas_dtpmv(char  uplo, char trans, char diag, int n, double* ap, double* x, int incx)
+{
+	//
+	//     Test the input parameters.
+	//
+	int type = 4;
+
+	int info = 0;
+	if (!cblas_lsame(uplo, 'U') && !cblas_lsame(uplo, 'L')) {
+		info = 1;
+	}
+	else if (!cblas_lsame(trans, 'N') &&
+		!cblas_lsame(trans, 'T') &&
+		!cblas_lsame(trans, 'C')) {
+		info = 2;
+	}
+	else if (!cblas_lsame(diag, 'U') &&
+		!cblas_lsame(diag, 'N')) {
+		info = 3;
+	}
+	else if (n < 0) {
+		info = 4;
+	}
+	else if (incx == 0) {
+		info = 7;
+	}
+	if (info != 0) {
+		cblas_xerbla("DTPMV ", info);
+		return;
+	}
+	//
+	//     Quick return if possible.
+	//
+	if (n == 0) return;
+
+	double zero = 0.0;
+	double temp;
+	int k, kk, ix, jx, kx;
+
+	if (cblas_lsame(uplo, 'U'))
+	{
+		type = 4;
+	}
+	else if (cblas_lsame(uplo, 'L'))
+	{
+		type = 5;
+	}
+	MData t(n, n, ap, n, type);
+	//t.show(); 
+	//double foo = t(0,2);
+
+	//
+	bool nounit = cblas_lsame(diag, 'N');
+	//
+	//     Set up the start point in X if the increment is not unity. This
+	//     will be  ( N - 1 )*INCX  too small for descending loops.
+	//
+	if (incx <= 0) {
+		kx = -(n - 1) * incx;
+	}
+	else if (incx != 1) {
+		kx = 0;
+	}
+	//
+	//     Start the operations. In this version the elements of AP are
+	//     accessed sequentially with one pass through AP.
+	//
+	if (cblas_lsame(trans, 'N')) {
+		//
+		//        Form  x:= A*x.
+		// 
+		if (cblas_lsame(uplo, 'U')) {
+			//
+			//  [ a0, a1, a2, a3, ]
+			//  [     a4, a5, a6, ]
+			//  [         a7, a8, ]
+			//  [             a9  ]  
+			// 
+			kk = 1;
+			if (incx == 1) {
+				k = 0;
+				for (int j = 0; j < n; j++)
+				{
+					temp = x[j];
+					if (nounit)
+					{
+						x[j] = x[j] * ap[k];
+						//
+						// printf("  x[%i] = x[%i] * ap[%i] = %5.3f \n", j, j, k, x[j]);  
+						// 
+					}
+					k++;
+
+					for (int i = j + 1; i < n; i++)
+					{
+						x[j] = x[j] + x[i] * ap[k];
+
+						//
+						// printf("  x[%i] = x[%i] + x[%i] * ap[%i] = %5.3f \n", j, j, i, k, x[j]);
+						//  
+						k++;
+					}
+				}
+
+
+				//for (int j = 0; j < n; j++) {
+				//	if (x[j] != zero) {
+				//		temp = x[j];
+				//		k = kk;
+				//		for (int i = 0; i < j; i++) {
+				//			//x[i] = x[i] + temp * ap[k]; 
+				//			x[i] = x[i] + temp * t(j,i);
+
+				//			printf("  x[%i] = x[%i] + temp * t[%i][%i]  \n", i, i, i, j);
+				//			printf("   t[%i][%i]  = %5.3f \n", i, j, t(j, i));
+				//				 
+
+				//			k = k + 1;
+				//		}
+				//		if (nounit)
+				//		{
+				//			// x[j] = x[j] * ap[kk + j - 1]; 
+				//			x[j] = x[j] * t(j, j); // [j] [j] ;
+				//			printf("  x[%i] = x[%i] * ap[%i]  \n", j, j, kk + j - 1);
+				//		}
+				//	}
+				//	kk = kk + j;
+				//}
+			}
+			else {
+				k = 0;
+				jx = kx;
+				for (int j = 0; j < n; j++)
+				{
+					temp = x[jx];
+					if (nounit)
+					{
+						x[jx] = x[jx] * ap[k];
+						//printf("  x[%i] = x[%i] * ap[%i] = %5.3f \n", j, j, k, x[j]);
+					}
+					k++;
+
+					ix = kx;
+					for (int i = j + 1; i < n; i++)
+					{
+						x[jx] = x[jx] + x[ix] * ap[k];
+
+						//printf("  x[%i] = x[%i] + x[%i] * ap[%i] = %5.3f \n", j, j, i, k, x[j]);
+						ix = ix + incx;
+						k++;
+					}
+					jx = jx + incx;
+
+				}
+
+
+				//jx = kx;
+				//for (int j = 0; j < n; j++) {
+				//	if (x[jx] != zero) {
+				//		temp = x[jx];
+				//		ix = kx;
+				//		for (int k = kk - 1; k < kk + j - 2; k++) {
+				//			x[ix] = x[ix] + temp * ap[k];
+				//			ix = ix + incx;
+				//		}
+				//		if (nounit) x[jx] = x[jx] * ap[kk + j - 1];
+				//	}
+				//	jx = jx + incx;
+				//	kk = kk + j;
+				//}
+			}
+
+
+		}
+		else {
+			// uplo -- 'L'
+			//
+			//  [ a0,        ]
+			//  [ a1, a2,    ]
+			//  [ a3, a4, a5 ]
+			//  [ a6, ...    ]  
+			// 
+
+			kk = (n * (n + 1)) / 2 - 1;
+			if (incx == 1) {
+				k = kk;
+				for (int j = n - 1; j >= 0; j--) {
+					if (x[j] != zero) {
+						temp = x[j];
+
+						if (nounit)
+						{
+							x[j] = x[j] * ap[k];
+						}
+						k = k - 1;
+						for (int i = j - 1; i >= 0; i--) {
+							x[j] = x[j] + x[i] * ap[k];
+							k = k - 1;
+						}
+					}
+				}
+			}
+			else {
+				k = kk;
+				kx = kx + (n - 1) * incx;
+				jx = kx;
+				for (int j = n - 1; j >= 0; j--) {
+					if (x[jx] != zero) {
+						temp = x[jx];
+
+						if (nounit)
+						{
+							x[jx] = x[jx] * ap[k];
+						}
+						k = k - 1;
+						for (int i = j - 1; i >= 0; i--) {
+							x[jx] = x[jx] + x[i] * ap[k];
+							k = k - 1;
+						}
+					}
+					jx = jx - incx;
+				}
+
+				//for (int j = n - 1; j >= 0; j--) {
+				//	if (x[jx] != zero) {
+				//		temp = x[jx];
+				//		ix = kx;
+				//		for (int k = kk - 1; k >= kk - (n - (j + 1)); k--) {
+				//			x[ix] = x[ix] + temp * ap[k];
+				//			ix = ix - incx;
+				//		}
+				//		if (nounit) 
+				//		{ 
+				//			x[jx] = x[jx] * ap[kk - n + j];
+				//		}
+				//	}
+				//	jx = jx - incx;
+				//	kk = kk - (n - j + 1);
+				//}
+			}
+		}
+	}
+	else {
+		//
+		//  Form  x := A**T*x.
+		//
+		if (cblas_lsame(uplo, 'U')) {
+			//
+			//  Upper Triangle 
+			// 
+			//  [ a0, a1, a2, a3, ]
+			//  [     a4, a5, a6, ]
+			//  [         a7, a8, ]
+			//  [             a9  ]  
+			//  
+			//  After transpose, the matrix is
+			// 
+			//  [ a0,            ]
+			//  [ a1, a4,        ]
+			//  [ a2, a5, a7,    ]
+			//  [ a3, a6, a8, a9 ]  
+			//   
+			//  x3 = x0*a3 + x1*a6 + x2*a8 + x3*a9 
+			//  x2 = x0*a2 + x1*a5 + x2*a7 
+			//  x1 = x0*a1 + x1*a4 
+			//  x0 = x0*a0 
+			//
+			//
+			kk = (n * (n + 1)) / 2 - 1;
+			if (incx == 1) {
+				for (int j = n - 1; j >= 0; j--) {
+					temp = x[j];
+					if (nounit) {
+						temp = temp * ap[kk];
+					}
+					k = kk;
+					for (int i = j - 1; i >= 0; i--)
+					{
+						k = k - (n - i - 1);
+						//
+						//printf("  temp = temp + ap[%i] * x[%i]", k, i);
+						//
+
+						temp = temp + ap[k] * x[i];
+						//
+						//printf(" = %5.3f \n", temp);
+						//  
+
+
+						//temp = temp + ap[k] * x[i]; 
+						//k = k - 1;
+					}
+					x[j] = temp;
+					kk = kk - (n - j + 1);
+				}
+			}
+			else {
+				jx = kx + (n - 1) * incx;
+				for (int j = n - 1; j >= 0; j--) {
+					temp = x[jx];
+					ix = jx;
+					if (nounit) {
+						temp = temp * ap[kk];
+					}
+					k = kk;
+					for (int i = j - 1; i >= 0; i--)
+					{
+						k = k - (n - i - 1);
+						ix = ix - incx;
+						temp = temp + ap[k] * x[ix];
+
+					}
+					x[jx] = temp;
+					kk = kk - (n - j + 1);
+					jx = jx - incx;
+
+					//for (int k = kk - 1; k >= kk - j + 1; k--) {
+					//	ix = ix - incx;
+					//	temp = temp + ap[k] * x[ix];
+					//}
+					//x[jx] = temp;
+					//jx = jx - incx;
+					//kk = kk - j;
+				}
+			}
+		}
+		else {
+			//
+			//  Lower Triangle 
+			// 
+			//  [ a0,         ]
+			//  [ a1, a2,     ]
+			//  [ a3, a4, a5, ]
+			//  [ a6, ...     ]  
+			//  
+			//  After transpose, the matrix is
+			//  [ a0, a1, a3, a6, ]    [x0] 
+			//  [     a2, a4, a7, ]    [x1] 
+			//  [         a5, a8, ]    [x2] 
+			//  [             a9  ]    [x3]   
+			// 
+			//  x0 = x0*a0 + x1*a1 + x2*a3 + x3*a6
+			//  x1 =         x1*a2 + x2*a4 + x3*a7
+			//  x2 =                 x2*a5 + x3*a8
+			//  x3 =                         x3*a9
+			kk = 0;
+			if (incx == 1) {
+				for (int j = 0; j < n; j++) {
+					temp = x[j];
+					if (nounit) {
+						temp = temp * ap[kk];
+					}
+					k = kk;
+					for (int i = j + 1; i < n; i++) {
+
+						k = k + i;
+						//
+						//printf("  temp = temp + ap[%i] * x[%i]", k, i);
+						//
+
+						temp = temp + ap[k] * x[i];
+						//
+						// printf(" = %5.3f \n", temp);
+						//  
+
+
+					}
+					x[j] = temp;
+					kk = kk + (j + 2);
+				}
+			}
+			else {
+				jx = kx;
+				for (int j = 0; j < n; j++) {
+					temp = x[jx];
+					ix = jx;
+					if (nounit) {
+						temp = temp * ap[kk];
+					}
+					k = kk;
+					for (int i = j + 1; i < n; i++)
+					{
+						ix = ix + incx;
+						k = k + i;
+						temp = temp + ap[k] * x[ix];
+					}
+					x[jx] = temp;
+					kk = kk + (j + 2);
+					jx = jx + incx;
+
+					//for (int k = kk; k < kk + n - j; k++) {
+					//	ix = ix + incx;
+					//	temp = temp + ap[k] * x[ix];
+					//}
+					//x[jx] = temp;
+					//jx = jx + incx;
+					//kk = kk + (n - j + 1);
+				}
+			}
+		}
+	}
+
+	return;
+}
+
+//
+// DTPSV  solves one of the systems of equations
+//
+//    A*x = b,   or   A**T*x = b,
+//
+// where b and x are n element vectors and A is an n by n unit, or
+// non-unit, upper or lower triangular matrix, supplied in packed form.
+//
+// No test for singularity or near-singularity is included in this
+// routine. Such tests must be performed before calling this routine.
+//
+//          AP is DOUBLE PRECISION array, dimension at least
+//           ( ( n*( n + 1 ) )/2 ).
+//           Before entry with  UPLO = 'U' or 'u', the array AP must
+//           contain the upper triangular matrix packed sequentially,
+//           column by column, so that AP( 1 ) contains a( 1, 1 ),
+//           AP( 2 ) and AP( 3 ) contain a( 1, 2 ) and a( 2, 2 )
+//           respectively, and so on.
+//           Before entry with UPLO = 'L' or 'l', the array AP must
+//           contain the lower triangular matrix packed sequentially,
+//           column by column, so that AP( 1 ) contains a( 1, 1 ),
+//           AP( 2 ) and AP( 3 ) contain a( 2, 1 ) and a( 3, 1 )
+//           respectively, and so on.
+//           Note that when  DIAG = 'U' or 'u', the diagonal elements of
+//           A are not referenced, but are assumed to be unity.
+//
+void cblas_dtpsv(char uplo, char trans, char diag, int n, double* ap, double* x, int incx)
+{
+	//
+	//     Test the input parameters.
+	//
+	int info = 0;
+	if (!cblas_lsame(uplo, 'U') && !cblas_lsame(uplo, 'L')) {
+		info = 1;
+	}
+	else if (!cblas_lsame(trans, 'N') &&
+		!cblas_lsame(trans, 'T') &&
+		!cblas_lsame(trans, 'C')) {
+		info = 2;
+	}
+	else if (!cblas_lsame(diag, 'U') &&
+		!cblas_lsame(diag, 'N')) {
+		info = 3;
+	}
+	else if (n < 0) {
+		info = 4;
+	}
+	else if (incx == 0) {
+		info = 7;
+	}
+	if (info != 0) {
+		cblas_xerbla("DTPSV ", info);
+		return;
+	}
+	//
+	//     Quick return if possible.
+	//
+	if (n == 0) {
+		return;
+	}
+
+	//
+	int i, ix, j, jx, k, kk, kx;
+	double temp;
+	double zero = 0.0;
+
+	bool nounit = cblas_lsame(diag, 'N');
+	//
+	//     Set up the start point in X if the increment is not unity. This
+	//     will be  ( N - 1 )*INCX  too small for descending loops.
+	//
+	if (incx <= 0) {
+		kx = 1 - (n - 1) * incx;
+	}
+	else if (incx != 1) {
+		kx = 0;
+	}
+
+
+	//
+	//     Start the operations. In this version the elements of AP are
+	//     accessed sequentially with one pass through AP.
+	//
+	if (cblas_lsame(trans, 'N')) {
+		//
+		//        Form  x := inv( A )*x.
+		//
+		if (cblas_lsame(uplo, 'U')) {
+			//
+			//  [ a0, a1, a2, a3, ]
+			//  [     a4, a5, a6, ]
+			//  [         a7, a8, ]
+			//  [             a9  ]  
+			//  
+			//  x[3] = x[3] / a9  
+			//  x[2] = x[2] - a8 * x[3]
+			//  x[1] = x[1] - a6 * x[3] 
+			//  x[0] = x[0] - a3 * x[3]
+			// 
+			//  x[2] = x[2] / a7 
+			//  x[1] = x[1] - a5 * x[2] 
+			//  x[0] = x[0] - a2 * x[2]
+			// 
+			//  x[1] = x[1] / a4 
+			// 
+			kk = (n * (n + 1)) / 2 - 1;
+			if (incx == 1) {
+				for (j = n - 1; j >= 0; j--) {
+					if (x[j] != zero) {
+						if (nounit) {
+							x[j] = x[j] / ap[kk];
+						}
+						temp = x[j];
+						k = kk;
+						for (i = j - 1; i >= 0; i--)
+						{
+							k = k - (n - i - 1);
+
+							//
+							// printf("  x[%i] = x[%i] - temp * ap[%i]  \n", i, i, k);
+							//
+
+							x[i] = x[i] - temp * ap[k];
+							// k = k - 1;  
+						}
+					}
+					//kk = kk - j;
+					kk = kk - (n - j + 1);
+				}
+			}
+			else {
+				jx = kx + (n - 1) * incx;
+				for (j = n - 1; j >= 0; j--) {
+					if (x[jx] != zero) {
+						if (nounit) {
+							x[jx] = x[jx] / ap[kk];
+						}
+						temp = x[jx];
+						ix = jx;
+						k = kk;
+						//for (k = kk - 1; k < kk - j + 1; k--) 
+						for (i = j - 1; i >= 0; i--)
+						{
+							k = k - (n - i - 1);
+							ix = ix - incx;
+							x[ix] = x[ix] - temp * ap[k];
+						}
+					}
+					jx = jx - incx;
+					kk = kk - (n - j + 1);
+				}
+			}
+		}
+		else {
+			// uplo -- 'L'
+			//
+			//  [ a0,            ]
+			//  [ a1, a2,        ]
+			//  [ a3, a4, a5     ]
+			//  [ a6, a7, a8, a9 ]  
+			//
+			//  
+			//  x[0] = x[0] / a0  
+			//  x[1] = x[1] - a1 * x[0]
+			//  x[2] = x[2] - a3 * x[0] 
+			//  x[3] = x[3] - a6 * x[0]
+			// 
+			// 
+			kk = 0;
+			if (incx == 1) {
+				for (j = 0; j < n; j++) {
+					if (x[j] != zero) {
+						if (nounit) {
+							x[j] = x[j] / ap[kk];
+						}
+						temp = x[j];
+						k = kk;
+						for (i = j + 1; i <= n - 1; i++) {
+							k = k + i;
+							//
+							// printf("  x[%i] = x[%i] - temp * ap[%i]", i, i, k);
+							//
+
+							x[i] = x[i] - temp * ap[k];
+
+							//
+							// printf( " = %5.3f \n", x[i]);
+							//
+						}
+					}
+					kk = kk + (j + 2);
+				}
+			}
+			else {
+				jx = kx;
+				for (j = 0; j < n; j++) {
+					if (x[jx] != zero) {
+						if (nounit) {
+							x[jx] = x[jx] / ap[kk];
+						}
+						temp = x[jx];
+						ix = jx;
+						k = kk;
+						//for (k = kk + 1; k < kk + n - j; k++) 
+						for (i = j + 1; i <= n - 1; i++)
+						{
+							k = k + i;
+							ix = ix + incx;
+							x[ix] = x[ix] - temp * ap[k];
+						}
+					}
+					jx = jx + incx;
+					//kk = kk + (n - j + 1);
+					kk = kk + (j + 2);
+				}
+			}
+		}
+	}
+	else {
+		//
+		//        Form  x := inv( A**T )*x.
+		//
+		if (cblas_lsame(uplo, 'U')) {
+			//
+			//  Upper Triangle 
+			// 
+			//  [ a0, a1, a2, a3, ]
+			//  [     a4, a5, a6, ]
+			//  [         a7, a8, ]
+			//  [             a9  ]  
+			//  
+			//  After transpose, the matrix is
+			// 
+			//  [ a0,            ]
+			//  [ a1, a4,        ]
+			//  [ a2, a5, a7,    ]
+			//  [ a3, a6, a8, a9 ]  
+			//   
+			//
+			//  
+			//  x[0] = x[0] / a0  
+			//  x[1] = x[1] - a1 * x[0]
+			//  x[2] = x[2] - a2 * x[0] 
+			//  x[3] = x[3] - a3 * x[0]
+			// 
+			// 
+
+
+			kk = 0;
+			if (incx == 1) {
+				for (j = 0; j < n; j++) {
+					temp = x[j];
+					if (nounit) {
+						temp = temp / ap[kk];
+					}
+					x[j] = temp;
+
+					k = kk + 1;
+					for (i = j + 1; i < n; i++) {
+						x[i] = x[i] - temp * ap[k];
+						//temp = temp - ap[k] * x[i];
+						k = k + 1;
+					}
+
+
+					kk = kk + (n - j);
+				}
+			}
+			else {
+				jx = kx;
+				for (j = 0; j < n; j++) {
+					temp = x[jx];
+					if (nounit) {
+						temp = temp / ap[kk];
+					}
+
+					ix = kx + incx;
+					k = kk + 1;
+					for (i = j + 1; i < n; i++) {
+						x[ix] = x[ix] - temp * ap[k];
+						//temp = temp - ap[k] * x[i];
+						ix = ix + incx;
+						k = k + 1;
+					}
+					//for (k = kk; k < kk + j - 2; k++) {
+					//	temp = temp - ap[k] * x[ix];
+					//	ix = ix + incx;
+					//}
+
+					x[jx] = temp;
+					jx = jx + incx;
+					kk = kk + (n - j);
+
+					kx = kx + incx;
+				}
+			}
+		}
+		else {
+			//
+			//  Lower Triangle 
+			// 
+			//  [ a0,         ]
+			//  [ a1, a2,     ]
+			//  [ a3, a4, a5, ]
+			//  [ a6, ...     ]  
+			//  
+			//  After transpose, the matrix is
+			//  [ a0, a1, a3, a6, ]    [x0] 
+			//  [     a2, a4, a7, ]    [x1] 
+			//  [         a5, a8, ]    [x2] 
+			//  [             a9  ]    [x3]   
+			// 
+			//  
+			//  x[3] = x[3] / a9  
+			//  x[2] = x[2] - a8 * x[3]
+			//  x[1] = x[1] - a7 * x[3] 
+			//  x[0] = x[0] - a6 * x[3]
+			// 
+			//  x[2] = x[2] / a5 
+			//  x[1] = x[1] - a4 * x[2] 
+			//  x[0] = x[0] - a3 * x[2]
+			// 
+			//  x[1] = x[1] / a2 
+			// 
+			kk = (n * (n + 1)) / 2 - 1;
+			if (incx == 1) {
+				for (j = n - 1; j >= 0; j--) {
+					temp = x[j];
+					if (nounit) {
+						temp = temp / ap[kk];
+					}
+					x[j] = temp;
+					k = kk;
+					for (i = j - 1; i >= 0; i--) {
+						k = k - 1;
+						x[i] = x[i] - temp * ap[k];
+						//temp = temp - ap[k] * x[i]; 
+					}
+					kk = kk - (j + 1);
+				}
+			}
+			else {
+				kx = kx + (n - 1) * incx;
+				jx = kx;
+				for (j = n - 1; j >= 0; j--) {
+					temp = x[jx];
+					if (nounit) {
+						temp = temp / ap[kk];
+					}
+					x[jx] = temp;
+					ix = kx;
+					k = kk;
+					for (i = j - 1; i >= 0; i--) {
+						k = k - 1;
+						ix = ix - incx;
+						x[ix] = x[ix] - temp * ap[k];
+						//temp = temp - ap[k] * x[i]; 
+					}
+					kk = kk - (j + 1);
+					jx = jx - incx;
+					kx = kx - incx;
+					//for (k = kk; k >= kk - (n - (j + 1)); k--) {
+					//	temp = temp - ap[k] * x[ix];
+					//	ix = ix - incx;
+					//}
+					//if (nounit) { 
+					//	temp = temp / ap[kk - n + j]; 
+					//} 
+					//jx = jx - incx;
+					//kk = kk - (n - j + 1);
+				}
+			}
+		}
+	}
+	//
+	return;
+}

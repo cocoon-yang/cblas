@@ -9,7 +9,7 @@
 #include "math.h" 
 #include "mdata.h"
 
- 
+extern double sign(double A, double B);
 
 //==============================================================
 // Level 1

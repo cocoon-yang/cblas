@@ -200,127 +200,127 @@ double cblas_idamax(int n, double* dx, int incx)
 
 
 
-// DLARFG generates a real elementary reflector H of order n, such
-// that
-//
-//       H * ( alpha ) = ( beta ),   H**T * H = I.
-//           (   x   )   (   0  )
-//
-// where alpha and beta are scalars, and x is an (n-1)-element real
-// vector. H is represented in the form
-//
-//       H = I - TAU * ( 1 ) * ( 1 v**T ) ,
-//                     ( v )
-//
-// where TAU is a real scalar and v is a real (n-1)-element
-// vector.
-//
-// If the elements of x are all zero, then TAU = 0 and H is taken to be
-// the unit matrix.
-//
-// Otherwise  1 <= TAU <= 2.
-// \param[in] N
-// \verbatim
-//          N is INTEGER
-//          The order of the elementary reflector.
-// \endverbatim
-//
-// \param[in,out] ALPHA
-// \verbatim
-//          ALPHA is DOUBLE PRECISION
-//          On entry, the value alpha.
-//          On exit, it is overwritten with the value beta.
-// \endverbatim
-//
-// \param[in,out] X
-// \verbatim
-//          X is DOUBLE PRECISION array, dimension
-//                         (1+(N-2)*abs(INCX))
-//          On entry, the vector x.
-//          On exit, it is overwritten with the vector v.
-// \endverbatim
-//
-// \param[in] INCX
-// \verbatim
-//          INCX is INTEGER
-//          The increment between elements of X. INCX > 0.
-// \endverbatim
-//
-// \param[out] TAU
-// \verbatim
-//          TAU is DOUBLE PRECISION
-//          The value TAU.
-// \endverbatim
-// 
-//  Authors:
-//  ========
-// 
-// \author Univ. of Tennessee
-// \author Univ. of California Berkeley
-// \author Univ. of Colorado Denver
-// \author NAG Ltd.
-void cblas_dlarfg(int N, double& ALPHA, double* X, int INCX, double& TAU)
-{
-	double beta, xnorm, rsafmn, safmin;
-	int knt;
-	double zero = 0.0; 
-	double one = 1.0;
-	if (N < 1) {
-		TAU = zero;
-		return;
-	}
-	//
-	xnorm = cblas_dnrm2(N - 1, X, INCX);
-	//
-	if (xnorm == zero) {
-		//
-		//        H  =  I
-		//
-		TAU = zero;
-	}
-	else {
-		//
-		//        general case
-		//
-		beta = -sign(dlapy2(ALPHA, xnorm), ALPHA);
-		safmin = dlamch("S") / dlamch("E");
-		knt = 0;
-		if (fabs(beta) < safmin) {
-			//
-			//           XNORM, BETA may be inaccurate; scale X and recompute them
-			//
-			rsafmn = one / safmin;
-		ROUTE10:       //continue;
-			knt = knt + 1;
-			cblas_dscal(N - 1, rsafmn, X, INCX);
-			beta = beta*rsafmn;
-			ALPHA = ALPHA*rsafmn;
-			if ((abs(beta) < safmin) & (knt < 20))
-			{
-				//         GO TO 10
-				goto ROUTE10;
-			}
-
-			//
-			//           New BETA is at most 1, at least SAFMIN
-			//
-			xnorm = cblas_dnrm2(N - 1, X, INCX);
-			beta = -sign(dlapy2(ALPHA, xnorm), ALPHA);
-		}
-		TAU = (beta - ALPHA) / beta;
-		cblas_dscal(N - 1, one / (ALPHA - beta), X, INCX);
-		//
-		//        If ALPHA is subnormal, it may lose relative accuracy
-		//
-		for (int j = 0; j < knt; j++)
-		{
-			beta = beta*safmin;
-		}
-		ALPHA = beta;
-	}
-	//
-	return;
-}
+////// DLARFG generates a real elementary reflector H of order n, such
+////// that
+//////
+//////       H * ( alpha ) = ( beta ),   H**T * H = I.
+//////           (   x   )   (   0  )
+//////
+////// where alpha and beta are scalars, and x is an (n-1)-element real
+////// vector. H is represented in the form
+//////
+//////       H = I - TAU * ( 1 ) * ( 1 v**T ) ,
+//////                     ( v )
+//////
+////// where TAU is a real scalar and v is a real (n-1)-element
+////// vector.
+//////
+////// If the elements of x are all zero, then TAU = 0 and H is taken to be
+////// the unit matrix.
+//////
+////// Otherwise  1 <= TAU <= 2.
+////// \param[in] N
+////// \verbatim
+//////          N is INTEGER
+//////          The order of the elementary reflector.
+////// \endverbatim
+//////
+////// \param[in,out] ALPHA
+////// \verbatim
+//////          ALPHA is DOUBLE PRECISION
+//////          On entry, the value alpha.
+//////          On exit, it is overwritten with the value beta.
+////// \endverbatim
+//////
+////// \param[in,out] X
+////// \verbatim
+//////          X is DOUBLE PRECISION array, dimension
+//////                         (1+(N-2)*abs(INCX))
+//////          On entry, the vector x.
+//////          On exit, it is overwritten with the vector v.
+////// \endverbatim
+//////
+////// \param[in] INCX
+////// \verbatim
+//////          INCX is INTEGER
+//////          The increment between elements of X. INCX > 0.
+////// \endverbatim
+//////
+////// \param[out] TAU
+////// \verbatim
+//////          TAU is DOUBLE PRECISION
+//////          The value TAU.
+////// \endverbatim
+////// 
+//////  Authors:
+//////  ========
+////// 
+////// \author Univ. of Tennessee
+////// \author Univ. of California Berkeley
+////// \author Univ. of Colorado Denver
+////// \author NAG Ltd.
+////void cblas_dlarfg(int N, double& ALPHA, double* X, int INCX, double& TAU)
+////{
+////	double beta, xnorm, rsafmn, safmin;
+////	int knt;
+////	double zero = 0.0; 
+////	double one = 1.0;
+////	if (N < 1) {
+////		TAU = zero;
+////		return;
+////	}
+////	//
+////	xnorm = cblas_dnrm2(N - 1, X, INCX);
+////	//
+////	if (xnorm == zero) {
+////		//
+////		//        H  =  I
+////		//
+////		TAU = zero;
+////	}
+////	else {
+////		//
+////		//        general case
+////		//
+////		beta = -sign(dlapy2(ALPHA, xnorm), ALPHA);
+////		safmin = dlamch("S") / dlamch("E");
+////		knt = 0;
+////		if (fabs(beta) < safmin) {
+////			//
+////			//           XNORM, BETA may be inaccurate; scale X and recompute them
+////			//
+////			rsafmn = one / safmin;
+////		ROUTE10:       //continue;
+////			knt = knt + 1;
+////			cblas_dscal(N - 1, rsafmn, X, INCX);
+////			beta = beta*rsafmn;
+////			ALPHA = ALPHA*rsafmn;
+////			if ((abs(beta) < safmin) & (knt < 20))
+////			{
+////				//         GO TO 10
+////				goto ROUTE10;
+////			}
+////
+////			//
+////			//           New BETA is at most 1, at least SAFMIN
+////			//
+////			xnorm = cblas_dnrm2(N - 1, X, INCX);
+////			beta = -sign(dlapy2(ALPHA, xnorm), ALPHA);
+////		}
+////		TAU = (beta - ALPHA) / beta;
+////		cblas_dscal(N - 1, one / (ALPHA - beta), X, INCX);
+////		//
+////		//        If ALPHA is subnormal, it may lose relative accuracy
+////		//
+////		for (int j = 0; j < knt; j++)
+////		{
+////			beta = beta*safmin;
+////		}
+////		ALPHA = beta;
+////	}
+////	//
+////	return;
+////}
 
 /***
 DLARF applies a real elementary reflector H to a real m by n matrix
@@ -417,7 +417,123 @@ void cblas_dlarf(char side, int m, int n, int l, double* v, int incv, double tau
 
 }
 
+/**
+ * @brief DLASET initializes an m-by-n matrix A to BETA on the diagonal and
+   ALPHA on the offdiagonals.
+ * @param uplo
+		  Specifies the part of the matrix A to be set.
+		  = 'U':      Upper triangular part is set; the strictly lower
+					  triangular part of A is not changed.
+		  = 'L':      Lower triangular part is set; the strictly upper
+					  triangular part of A is not changed.
+		  Otherwise:  All of the matrix A is set.
 
+ * @param m   The number of rows of the matrix A.  M >= 0.
+ * @param n   The number of columns of the matrix A.  N >= 0.
+ * @param alpha  The constant to which the offdiagonal elements are to be set.
+ * @param beta   The constant to which the diagonal elements are to be set.
+ * @param a
+		  On exit, the leading m-by-n submatrix of A is set as follows:
+
+		  if UPLO = 'U', A(i,j) = ALPHA, 1<=i<=j-1, 1<=j<=n,
+		  if UPLO = 'L', A(i,j) = ALPHA, j+1<=i<=m, 1<=j<=n,
+		  otherwise,     A(i,j) = ALPHA, 1<=i<=m, 1<=j<=n, i.ne.j,
+
+		  and, for all UPLO, A(i,i) = BETA, 1<=i<=min(m,n).
+ *
+ * @param lda   The leading dimension of the array A.  LDA >= max(1,M).
+*/
+void dlaset(char uplo,
+	int m, int n, double alpha,
+	double beta, double* pA, int lda)
+{
+	MData a(m, n, pA, lda);
+	if (cblas_lsame(uplo, 'U')) {
+		/*
+		*        Set the strictly upper triangular or trapezoidal part of the
+		*        array to ALPHA.
+		*/
+		for (int j = 1; j < n; j++) {
+			for (int i = 0; i < std::min(j, m); i++) {
+				a(i, j) = alpha;
+			} // for i
+		} // for j
+
+	}
+	else if (cblas_lsame(uplo, 'L')) {
+		/*
+		*        Set the strictly lower triangular or trapezoidal part of the
+		*        array to ALPHA.
+		*/
+		for (int j = 0; j < std::min(m, n); j++) {
+			for (int i = j; i < m; i++) {
+				a(i, j) = alpha;
+			} // for i
+		} // for j
+
+	}
+	else {
+		/*
+		*        Set the leading m-by-n submatrix to ALPHA.
+		*/
+		for (int j = 0; j < n; j++) {
+			for (int i = 0; i < m; i++) {
+				a(i, j) = alpha;
+			} // for i
+		} // for j
+	}
+	/*
+	*     Set the first min(M,N) diagonal elements to BETA.
+	*/
+	for (int i = 0; i < std::min(m, n); i++) {
+		a(i, i) = beta;
+	} // for i
+
+	return;
+}
+
+
+/***
+\brief DLACPY copies all or part of one two-dimensional array to another.
+*/
+void cblas_dlacpy(char uplo, int m, int n,
+	double* pA, int lda, double* pB, int ldb)
+{
+	MData a(m, n, pA, ldb);
+	MData b(m, n, pB, ldb);
+
+
+	if (cblas_lsame(uplo, 'U'))
+	{
+		for (int j = 0; j < n; j++)
+		{
+			for (int i = 0; i < std::min(j, m); i++)
+			{
+				b(i, j) = a(i, j);
+			}
+		}
+	}
+	else if (cblas_lsame(uplo, 'L'))
+	{
+		for (int j = 0; j < n; j++)
+		{
+			for (int i = j; i < m; i++)
+			{
+				b(i, j) = a(i, j);
+			}
+		}
+	}
+	else {
+		for (int j = 0; j < n; j++)
+		{
+			for (int i = 0; i < m; i++)
+			{
+				b(i, j) = a(i, j);
+			}
+		}
+	}
+	return;
+}
 
 /*****
 DLASV2 computes the singular value decomposition of a 2-by-2
@@ -652,6 +768,129 @@ void cblas_xerbla(const char* SRNAME, int INFO)
 }
 
 
+/**
+* IEEECK is called from the ILAENV to verify that Infinity and
+* possibly NaN arithmetic is safe (i.e. will not trap).
+*/
+int  ieeeck(int ispec, double zero, double one)
+{
+	double nan1, nan2, nan3, nan4, nan5, nan6, neginf, negzro, newzro, posinf;
+
+	int result = 1;
+
+	posinf = one / zero;
+	if (posinf <= one) {
+		result = 0;
+		return result;
+	}
+
+	neginf = -one / zero;
+	if (neginf >= zero) {
+		result = 0;
+		return result;
+	}
+
+	negzro = one / (neginf + one);
+	if (negzro != zero) {
+		result = 0;
+		return result;
+	}
+
+	neginf = one / negzro;
+	if (neginf >= zero) {
+		result = 0;
+		return result;
+	}
+
+	newzro = negzro + zero;
+	if (newzro != zero) {
+		result = 0;
+		return result;
+	}
+
+	posinf = one / newzro;
+	if (posinf <= one) {
+		result = 0;
+		return result;
+	}
+
+	neginf = neginf * posinf;
+	if (neginf >= zero) {
+		result = 0;
+		return result;
+	}
+
+	posinf = posinf * posinf;
+	if (posinf <= one) {
+		result = 0;
+		return result;
+	}
+
+	/*
+	*
+	*
+	*Return if we were only asked to check infinity arithmetic
+	*/
+	if (ispec == 0)
+		return result;
+
+	nan1 = posinf + neginf;
+
+	nan2 = posinf / neginf;
+
+	nan3 = posinf / posinf;
+
+	nan4 = posinf * zero;
+
+	nan5 = neginf * negzro;
+
+	nan6 = nan5 * zero;
+
+	if (nan1 == nan1) {
+		result = 0;
+		return result;
+	}
+
+	if (nan2 == nan2) {
+		result = 0;
+		return result;
+	}
+
+	if (nan3 == nan3) {
+		result = 0;
+		return result;
+	}
+
+	if (nan4 == nan4) {
+		result = 0;
+		return result;
+	}
+
+	if (nan5 == nan5) {
+		result = 0;
+		return result;
+	}
+
+	if (nan6 == nan6) {
+		result = 0;
+		return result;
+	}
+
+	return result;
+}
+
+/**
+ * @brief  Compare two char array 
+ * @param s1: char array end with '\0';
+ * @param s2: char array end with '\0'; 
+ * @return  true -- s1 == s2 
+ *          false -- otherwise 
+*/
+bool strCmp(const char* s1, const char* s2)
+{
+	int tmp = strcmp(s1, s2);  // 0 -- s1 == s2 
+	return (0 == tmp);
+}
 
 /****
 @brief ILAENV returns problem-dependent parameters for the local
@@ -667,27 +906,27 @@ to be used in conjunction with XLAENV in TESTING and TIMING.
 Specifies the parameter to be returned as the value of
 ILAENV.
 = 1: the optimal blocksize; if this value is 1, an unblocked
-algorithm will give the best performance.
+     algorithm will give the best performance.
 = 2: the minimum block size for which the block routine
-should be used; if the usable block size is less than
-this value, an unblocked routine should be used.
+     should be used; if the usable block size is less than
+     this value, an unblocked routine should be used.
 = 3: the crossover point (in a block routine, for N less
-than this value, an unblocked routine should be used)
+     than this value, an unblocked routine should be used)
 = 4: the number of shifts, used in the nonsymmetric
-eigenvalue routines
+     eigenvalue routines
 = 5: the minimum column dimension for blocking to be used;
-rectangular blocks must have dimension at least k by m,
-where k is given by ILAENV(2,...) and m by ILAENV(5,...)
+     rectangular blocks must have dimension at least k by m,
+     where k is given by ILAENV(2,...) and m by ILAENV(5,...)
 = 6: the crossover point for the SVD (when reducing an m by n
-matrix to bidiagonal form, if max(m,n)/min(m,n) exceeds
-this value, a QR factorization is used first to reduce
-the matrix to a triangular form.)
+     matrix to bidiagonal form, if max(m,n)/min(m,n) exceeds
+	 this value, a QR factorization is used first to reduce
+	 the matrix to a triangular form.)
 = 7: the number of processors
 = 8: the crossover point for the multishift QR and QZ methods
-for nonsymmetric eigenvalue problems.
+	 for nonsymmetric eigenvalue problems.
 = 9: maximum size of the subproblems at the bottom of the
-computation tree in the divide-and-conquer algorithm
-(used by xGELSD and xGESDD)
+	 computation tree in the divide-and-conquer algorithm
+	 (used by xGELSD and xGESDD)
 =10: ieee NaN arithmetic can be trusted not to trap
 =11: infinity arithmetic can be trusted not to trap
 
@@ -713,44 +952,859 @@ Problem dimensions for the subroutine NAME; these may not all
       >= 0: the value of the parameter specified by ISPEC
       < 0:  if ILAENV = -k, the k-th argument had an illegal value. 
 */
-int ilaenv(int ispec, const char* name, char OPTS, int N1, int N2, int N3, int N4)
+int ilaenv(int ispec, const char* name, char OPTS, int n1, int n2, int n3, int n4)
 {
-	if ((ispec >= 1) & (ispec <= 5)) {
-/*
-*        Return a value from the common block.
-*/ 
+	// return value 
+	int ilaenv = -1;
+	int nb, nbmin, nx;
+	int i = 0;
+	bool cname, sname, twostage;
+	char c1;
+	char c2[2 + 1];
+	char c4[2 + 1];
+	char c3[3 + 1];
+	char subnam[16];
+	//strncpy(subname, name, sizeof(subname) - 1);
+	snprintf(subnam, sizeof(subnam), "%s", name);
+
+
+	switch (ispec)
+	{
+	case 4:
+		goto step80;
+		break;
+	case 5:
+		goto step90;
+		break;
+	case 6:
+		goto step100;
+		break;
+	case 7:
+		goto step110;
+		break;
+	case 8:
+		goto step120;
+		break;
+	case 9:
+		goto step130;
+		break;
+	case 10:
+		goto step140;
+		break;
+	case 11:
+		goto step150;
+		break;
+	}
+
+
+	/*
+	*     Convert NAME to upper case if the first character is lower case.
+	*/
+	if ((ispec >= 1) & (ispec <= 3)) {
+		/*
+		*        Return a value from the common block.
+		*/
+		ilaenv = 1;
 		char t[5];
-		char geqr[] = "GEQR ";
-		char gelq[] = "GELQ ";
-		strncpy(t, name, 5);
-		int ret = strcmp(t, geqr);
-		if (0 == ret)
-		{
-			if (N3 == 2) {
-				return 2;
-			}
-			else {
-				return 1;
-			} 
-		}
-		ret = strcmp(t, gelq);
-		if (0 == ret)
-		{
-			if (N3 == 2) {
-				return 2;
-			}
-			else {
-				return 1;
+		char ic = name[0];
+		char iz = 'Z';
+
+		if ((iz == 90) || (iz == 122)) {
+			/*
+			*        ASCII character set
+			*/
+			if ((ic >= 97) && (ic <= 122)) {
+				subnam[0] = char(ic - 32);
+				for (i = 1; i < 5; i++) {
+					ic = subnam[i];
+					if (ic >= 97 && ic <= 122) {
+						subnam[i] = char(ic - 32);
+					}
+				}
 			}
 		}
-		return ispec;
+		else if (iz == 233 || iz == 169) {
+			/*
+			*        EBCDIC character set
+			*/
+			if ((ic >= 129 && ic <= 137) ||
+				(ic >= 145 && ic <= 153) ||
+				(ic >= 162 && ic <= 169)) {
+				subnam[0] = char(ic + 64);
+				for (i = 1; i < 5; i++) {
+					ic = (subnam[i]);
+					if ((ic >= 129 && ic <= 137) ||
+						(ic >= 145 && ic <= 153) ||
+						(ic >= 162 && ic <= 169))
+					{
+						subnam[i] = char(ic + 64);
+					}
+				}
+			}
+
+		}
+		else if (iz == 218 || iz == 250) {
+			/*
+			*        Prime machines:  ASCII+128
+			*/
+			if (ic >= 225 && ic <= 250) {
+				subnam[0] = char(ic - 32);
+				for (i = 1; i < 5; i++) {
+					ic = subnam[i];
+					if (ic >= 225 && ic <= 250)
+						subnam[i] = char(ic - 32);
+				}
+			}
+		}
+
+
+		c1 = subnam[0];
+		sname = (c1 == 'S' || c1 == 'D');
+		cname = (c1 == 'C' || c1 == 'Z');
+		if (!(cname || sname))
+		{
+			return ilaenv;
+		}
+
+		// c2 = subnam(2: 3);
+		for (i = 0; i < 2; i++)
+		{
+			c2[i] = subnam[i + 1];
+		}
+		c2[2] = '\0';
+
+		// c3 = subnam(4: 6);
+		for (i = 0; i < 3; i++)
+		{
+			c3[i] = subnam[i + 3];
+		}
+		c3[3] = '\0';
+
+		//c4 = c3(2: 3);
+		for (i = 0; i < 2; i++)
+		{
+			c4[i] = c3[i + 1];
+		}
+		c4[2] = '\0';
+
+		//twostage = len(subnam) >= 11 && subnam(11: 11) == '2';
+		twostage = ((sizeof(subnam) >= 11) && (subnam[10] == '2'));
+
+
+		switch (ispec)
+		{
+		case 1:
+			goto step50;
+			break;
+		case 2:
+			goto step60;
+			break;
+		case 3:
+			goto step70;
+			break;
+		}
+
+
 	}
 	else if (ispec == 6) {
 
 
 	}
 
-	return 0;
+
+step50:
+	/*
+	*     ISPEC = 1:  block size
+	*
+	*     In these examples, separate code is provided for setting NB for
+	*     real and complex.  We assume that NB will take the same value in
+	*     single or double precision.
+	*/
+	nb = 1;
+
+	// int tmp = strcmp(subnam + 1, "LAORH");
+
+	if (strCmp(subnam + 1, "LAORH"))
+	{
+		/*
+		*  This is for *LAORHR_GETRFNP routine
+		*/
+		if (sname) {
+			nb = 32;
+		}
+		else {
+			nb = 32;
+		}
+	}
+	else if (strCmp(c2, "GE")) {
+
+		if (strCmp(c3, "TRF"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(c3, "QRF") || strCmp(c3, "RQF") || strCmp(c3, "LQF") || strCmp(c3, "QLF"))
+		{
+			if (sname) {
+				nb = 32;
+			}
+			else {
+				nb = 32;
+			}
+		}
+		else if (strCmp(c3, "QR "))
+		{
+			if (n3 == 1)
+			{
+				if (sname)
+				{
+					//     M*N
+					if ((n1 * n2 <= 131072) || (n1 <= 8192)) {
+						nb = n1;
+					}
+					else {
+						nb = 32768 / n2;
+					}
+				}
+				else {
+					if ((n1 * n2 <= 131072) || (n1 <= 8192)) {
+						nb = n1;
+					}
+					else {
+						nb = 32768 / n2;
+					}
+				}
+			}
+			else {
+				if (sname) {
+					nb = 1;
+				}
+				else {
+					nb = 1;
+				}
+			}
+		}
+		else if (strCmp(c3, "LR "))
+		{
+			if (n3 == 2)
+			{
+				if (sname)
+				{
+					//    M*N
+					if ((n1 * n2 <= 131072) || (n1 <= 8192)) {
+						nb = n1;
+					}
+					else {
+						nb = 32768 / n2;
+					}
+				}
+				else {
+					if ((n1 * n2 <= 131072) || (n1 <= 8192)) {
+						nb = n1;
+					}
+					else {
+						nb = 32768 / n2;
+					}
+				}
+			}
+			else {
+				if (sname) {
+					nb = 1;
+				}
+				else {
+					nb = 1;
+				}
+			}
+		}
+		else if (strCmp(c3, "HBD"))
+		{
+			if (sname) {
+				nb = 32;
+			}
+			else {
+				nb = 32;
+			}
+		}
+		else if (strCmp(c3, "BRD"))
+		{
+			if (sname) {
+				nb = 32;
+			}
+			else {
+				nb = 32;
+			}
+		}
+		else if (strCmp(c3, "TRI"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(c3, "TRI"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(subnam + 3, "QP3RK"))
+		{
+			if (sname) {
+				nb = 32;
+			}
+			else {
+				nb = 32;
+			}
+		}
+	}
+
+	else if (strCmp(c2, "PO"))
+	{
+		if (strCmp(c3, "TRF"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+	}
+
+	else if (strCmp(c2, "SY"))
+	{
+		if (strCmp(c3, "TRF"))
+		{
+			if (sname) {
+				if (twostage) {
+					nb = 192;
+				}
+				else {
+					nb = 64;
+				}
+			}
+			else {
+				if (twostage) {
+					nb = 192;
+				}
+				else {
+					nb = 64;
+				}
+			}
+		}
+		else if (sname && strCmp(c3, "TRD"))
+		{
+			nb = 32;
+		}
+		else if (sname && strCmp(c3, "GST"))
+		{
+			nb = 64;
+		}
+	}
+
+	else if (cname && strCmp(c2, "HE"))
+	{
+		if (strCmp(c3, "TRF"))
+		{
+			if (twostage) {
+				nb = 192;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(c3, "TRD"))
+		{
+			nb = 32;
+		}
+		else if (strCmp(c3, "GST"))
+		{
+			nb = 64;
+		}
+	}
+
+	else if (sname && strCmp(c2, "QR"))
+	{
+		if (c3[0] == 'G')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ")
+				|| strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR")
+				|| strCmp(c4, "BR"))
+			{
+				nb = 32;
+			}
+		}
+		else if (c3[0] == 'M')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ")
+				|| strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR")
+				|| strCmp(c4, "BR"))
+			{
+				nb = 32;
+			}
+		}
+	}
+
+	else if (sname && strCmp(c2, "UN"))
+	{
+		if (c3[0] == 'G')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ")
+				|| strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR")
+				|| strCmp(c4, "BR"))
+			{
+				nb = 32;
+			}
+		}
+		else if (c3[0] == 'M')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ")
+				|| strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR")
+				|| strCmp(c4, "BR"))
+			{
+				nb = 32;
+			}
+		}
+	}
+
+	else if (strCmp(c2, "GB"))
+	{
+		if (strCmp(c3, "TRF"))
+		{
+			if (sname) {
+				if (n4 <= 64) {
+					nb = 1;
+				}
+				else {
+					nb = 32;
+				}
+			}
+			else {
+				if (n4 <= 64) {
+					nb = 1;
+				}
+				else {
+					nb = 32;
+				}
+			}
+		}
+	}
+
+	else if (strCmp(c2, "PB"))
+	{
+		if (strCmp(c3, "TRF"))
+		{
+			if (sname) {
+				if (n4 <= 64) {
+					nb = 1;
+				}
+				else {
+					nb = 32;
+				}
+			}
+			else {
+				if (n4 <= 64) {
+					nb = 1;
+				}
+				else {
+					nb = 32;
+				}
+			}
+		}
+	}
+
+	else if (strCmp(c2, "TR"))
+	{
+		if (strCmp(c3, "TRI"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(c3, "EVC"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(c3, "SYL"))
+		{
+			// The upper bound is to prevent overly aggressive scaling.
+			if (sname) {
+				nb = std::min(std::max(48, int((std::min(n1, n2) * 16) / 100)), 240);
+			}
+			else {
+				nb = std::min(std::max(24, int((std::min(n1, n2) * 8) / 100)), 80);
+			}
+		}
+	}
+
+	else if (strCmp(c2, "LA"))
+	{
+		if (strCmp(c3, "UUM"))
+		{
+			if (sname) {
+				nb = 64;
+			}
+			else {
+				nb = 64;
+			}
+		}
+		else if (strCmp(c3, "UUM"))
+		{
+			if (sname) {
+				nb = 32;
+			}
+			else {
+				nb = 32;
+			}
+		}
+	}
+
+	else if (sname && strCmp(c2, "ST"))
+	{
+		if (strCmp(c3, "EBZ"))
+		{
+			nb = 1;
+		}
+	}
+
+	else if (strCmp(c2, "GG"))
+	{
+		nb = 32;
+		if (strCmp(c3, "HD3"))
+		{
+			if (sname) {
+				nb = 32;
+			}
+			else {
+				nb = 32;
+			}
+		}
+
+	}
+
+	ilaenv = nb;
+	return ilaenv;
+
+
+step60:
+	/*
+	*     ISPEC = 2:  minimum block size
+	*/
+	nbmin = 2;
+
+	if (strCmp(c2, "GE"))
+	{
+		if (strCmp(c3, "QRF") || strCmp(c3, "RQF") || strCmp(c3, "LQF") || strCmp(c3, "QLF"))
+		{
+			if (sname) {
+				nbmin = 2;
+			}
+			else {
+				nbmin = 2;
+			}
+		}
+		else if (strCmp(c3, "HRD"))
+		{
+			if (sname) {
+				nbmin = 2;
+			}
+			else {
+				nbmin = 2;
+			}
+		}
+		else if (strCmp(c3, "BRD"))
+		{
+			if (sname) {
+				nbmin = 2;
+			}
+			else {
+				nbmin = 2;
+			}
+		}
+		else if (strCmp(c3, "TRI"))
+		{
+			if (sname) {
+				nbmin = 2;
+			}
+			else {
+				nbmin = 2;
+			}
+		}
+		else {
+			// if( subnam( 4: 7 ) == 'QP3RK' ) 
+			char tmp[7 + 1];
+			for (i = 0; i < 2; i++)
+			{
+				tmp[i] = subnam[i + 3];
+			}
+			tmp[7] = '\0';
+			if (strCmp(tmp, "QP3RK"))
+			{
+				if (sname) {
+					nbmin = 2;
+				}
+				else {
+					nbmin = 2;
+				}
+			}
+		}
+
+	}
+
+	else if (strCmp(c2, "SY"))
+	{
+		if (strCmp(c3, "TRF"))
+		{
+			if (sname) {
+				nbmin = 8;
+			}
+			else {
+				nbmin = 8;
+			}
+		}
+		else if (sname && strCmp(c3, "TRD"))
+		{
+			nbmin = 2;
+		}
+	}
+
+	else if (cname && strCmp(c2, "HE"))
+	{
+		if (strCmp(c3, "TRD"))
+		{
+			nbmin = 2;
+		}
+	}
+
+	else if (sname && strCmp(c2, "OR"))
+	{
+		if (c3[0] == 'G')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ") ||
+				strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR") ||
+				strCmp(c4, "BR"))
+			{
+				nbmin = 2;
+			}
+		}
+		else if (c3[0] == 'M')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ") ||
+				strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR") ||
+				strCmp(c4, "BR"))
+			{
+				nbmin = 2;
+			}
+		}
+	}
+
+	else if (strCmp(c2, "GG"))
+	{
+		nbmin = 2;
+		if (strCmp(c3, "HD3"))
+		{
+			nbmin = 2;
+		}
+	}
+
+	return nbmin;
+
+step70:
+	/*
+	*     ISPEC = 3:  crossover point
+	*/
+	nx = 0;
+	if (strCmp(c2, "GE"))
+	{
+		if (strCmp(c3, "QRF") || strCmp(c3, "RQF") || strCmp(c3, "LQF") || strCmp(c3, "QLF"))
+		{
+			if (sname) {
+				nx = 128;
+			}
+			else {
+				nx = 128;
+			}
+		}
+		else if (strCmp(c3, "HRD"))
+		{
+			if (sname) {
+				nx = 128;
+			}
+			else {
+				nx = 128;
+			}
+		}
+		else if (strCmp(c3, "BRD"))
+		{
+			if (sname) {
+				nx = 128;
+			}
+			else {
+				nx = 128;
+			}
+		}
+		else {
+			// if( subnam( 4: 7 ) == 'QP3RK' ) 
+			char tmp[7 + 1];
+			for (i = 0; i < 2; i++)
+			{
+				tmp[i] = subnam[i + 3];
+			}
+			tmp[7] = '\0';
+			if (strCmp(tmp, "QP3RK"))
+			{
+				if (sname) {
+					nx = 128;
+				}
+				else {
+					nx = 128;
+				}
+			}
+		}
+	}
+
+	else if (strCmp(c2, "SY"))
+	{
+		if (sname && strCmp(c3, "TRD"))
+		{
+			nx = 32;
+		}
+	}
+
+	else if (cname && strCmp(c2, "HE"))
+	{
+		if (strCmp(c3, "TRD"))
+		{
+			nx = 32;
+		}
+	}
+
+	else if (sname && strCmp(c2, "OR"))
+	{
+		if (c3[0] == 'G')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ") ||
+				strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR") ||
+				strCmp(c4, "BR"))
+			{
+				nx = 128;
+			}
+		}
+	}
+
+	else if (cname && strCmp(c2, "UN"))
+	{
+		if (c3[0] == 'G')
+		{
+			if (strCmp(c4, "QR") || strCmp(c4, "RQ") || strCmp(c4, "LQ") ||
+				strCmp(c4, "QL") || strCmp(c4, "HR") || strCmp(c4, "TR") ||
+				strCmp(c4, "BR"))
+			{
+				nx = 128;
+			}
+		}
+	}
+
+	else if (strCmp(c2, "GG"))
+	{
+		nx = 128;
+		if (strCmp(c3, "HD3"))
+		{
+			nx = 128;
+		}
+	}
+	return nx;
+
+step80:
+	/*
+	*     ISPEC = 4:  number of shifts (used by xHSEQR)
+	*/
+	ilaenv = 6;
+	return ilaenv;
+
+step90:
+	/*
+	*     ISPEC = 5:  minimum column dimension (not used)
+	*/
+	ilaenv = 2;
+	return ilaenv;
+
+step100:
+	/*
+	*     ISPEC = 6:  crossover point for SVD (used by xGELSS and xGESVD)
+	*/
+	ilaenv = int((std::min(n1, n2)) * 1.6e0);
+	return ilaenv;
+
+step110:
+	/*
+	*     ISPEC = 7:  number of processors (not used)
+	*/
+	ilaenv = 1;
+	return ilaenv;
+
+step120:
+	/*
+	*     ISPEC = 8:  crossover point for multishift (used by xHSEQR)
+	*/
+	ilaenv = 50;
+	return ilaenv;
+
+step130:
+	/*
+	*     ISPEC = 9:  maximum size of the subproblems at the bottom of the
+	*                 computation tree in the divide-and-conquer algorithm
+	*                 (used by xGELSD and xGESDD)
+	*/
+	ilaenv = 25;
+	return ilaenv;
+
+step140:
+	/*
+	*     ISPEC = 10: ieee and infinity NaN arithmetic can be trusted not to trap
+	*/
+	//    ILAENV = 0
+	ilaenv = 1;
+	if (ilaenv == 1) {
+		ilaenv = ieeeck(1, 0.0, 1.0);
+	}
+	return ilaenv;
+
+step150:
+	/*
+	*     ISPEC = 11: ieee infinity arithmetic can be trusted not to trap
+	*/
+	//     ILAENV = 0
+	ilaenv = 1;
+	if (ilaenv == 1) {
+		ilaenv = ieeeck(0, 0.0, 1.0);
+	}
+	return ilaenv;
+
+step160:
+	/*
+	*     12 <= ISPEC <= 17: xHSEQR or related subroutines.
+	*/
+	//ilaenv = iparmq(ispec, name, opts, n1, n2, n3, n4); 
+	ilaenv = 1;
+	return ilaenv;
 }
 
 
@@ -848,9 +1902,12 @@ bool cblas_lsame(char CA, char CB)
 }
 
 
-/**
-@brief
-ILADLC scans a matrix for its last non-zero column.
+/***
+  ILADLC scans A for its last non-zero column.
+ \param[in] m: int, The number of rows of the matrix A.
+ \param[in] n: int, The number of columns of the matrix A.
+ \param[in] pA: double*,  The m by n matrix A.
+ \param[in] lda: int, The leading dimension of the array A. LDA >= max(1,M).
 */
 int iladlc(int m, int n, double* pA, int lda)
 {
@@ -881,6 +1938,7 @@ int iladlc(int m, int n, double* pA, int lda)
 	return result;
 }
 
+  
 /***
 @brief
 ILADLR scans a matrix for its last non-zero row.
@@ -899,8 +1957,8 @@ int iladlr(int m, int n, double* pA, int lda)
 	if (m == 0) {
 		result = m;
 	}
-	else if ((a(m, 0) != zero) || (a(m, n) != zero)) {
-		result = m;
+	else if ((a(m - 1, 0) != zero) || (a(m - 1, n - 1) != zero)) {
+		result = m - 1;
 	}
 	else {
 		// Scan up each column tracking the last zero row seen.
@@ -918,52 +1976,6 @@ int iladlr(int m, int n, double* pA, int lda)
 		}
 	}
 	return result;
-}
-
-
-// Assistant Methods
-/***
-  @brief Show vector 
-  @param[in] data: double*, data pointer 
-  @param[in] m: int, vector dimension 
-*/
-void showVector_d(double* data, int m)
-{
-	if (NULL == data)
-	{
-		return;
-	}
-	for (int i = 0; i < m; i++) {
-		printf("%12.5G", data[i]);
-		if (0 != i)
-		{
-			if (0 == (i % 6)) {
-				printf("\n");
-			}
-		}
-	}
-	printf("\n");
-}
-
-
-/***
-  @brief Show matrix
-  @param[in] data: double*, data pointer
-  @param[in] m: int, matrix column number 
-  @param[in] k: int, matrix row number
-*/
-void showMatrix_d(double* data, int m, int k)
-{
-	if (NULL == data)
-	{
-		return;
-	}
-	for (int i = 0; i<std::min(m, 6); i++) {
-		for (int j = 0; j< std::min(k, 6); j++) {
-			printf("%12.5G", data[j + i*k]);
-		}
-		printf("\n");
-	}
 }
 
 
@@ -1007,3 +2019,76 @@ int cblas_iladlr(int m, int n, double* pA, int lda)
 }
 
 
+// Assistant Methods
+/***
+  @brief Show vector 
+  @param[in] data: double*, data pointer 
+  @param[in] m: int, vector dimension 
+*/
+void showVector_d(double* data, int m)
+{
+	if (NULL == data)
+	{
+		return;
+	}
+	for (int i = 0; i < m; i++) {
+		printf("%12.5G", data[i]);
+		if (0 != i)
+		{
+			if (0 == (i % 6)) {
+				printf("\n");
+			}
+		}
+	}
+	printf("\n");
+}
+
+
+/***
+  @brief Show matrix
+  @param[in] data: double*, data pointer
+  @param[in] m: int, matrix column number 
+  @param[in] k: int, matrix row number
+*/
+void showMatrix_d(double* data, int m, int k, int lda)
+{
+	if (NULL == data)
+	{
+		return;
+	}
+	if (lda <= 0)
+	{
+		lda = k;
+	}
+	int ite = 0;
+	for (int i = 0; i<std::min(m, 6); i++) {
+		for (int j = 0; j< std::min(k, 6); j++) {
+			ite = j + i * lda;
+			printf("%12.5G", data[ite]);
+		}
+		printf("\n");
+	}
+}
+ 
+/* Auxiliary routine: printing a vector of integers */
+void print_int_vector(const char* desc, int n, int* a) {
+	int j;
+	printf("\n %s\n", desc);
+	for (j = 0; j < n; j++) printf(" %6i", a[j]);
+	printf("\n");
+}
+
+/* Auxiliary routine: printing a matrix */
+void print_matrix(const char* desc, int m, int n, double* a, int lda) {
+	int i, j;
+	int ite = 0;
+	printf("\n %s\n", desc);
+	for (i = 0; i < m; i++) {
+		for (j = 0; j < n; j++)
+		{
+			ite = j + i * lda;
+			printf(" %6.2f", a[ite]);
+		}
+		printf("\n");
+	}
+}
