@@ -13,7 +13,7 @@ cc = cl
 CFLAGS =   
    
 # The CPPSOURCES macro contains a list of source files.
-CPPSOURCES =  cblas1_d.cc    cblas2_d.cc    cblas3_d.cc   lapack_d.cc    assistant.cc
+CPPSOURCES =  cblas1_d.cc  cblas2_d.cc  cblas3_d.cc  lapack_d.cc  assistant.cc
   
 # The CPPOBJECTS macro converts the CPPSOURCES macro into a list
 # of object files.         
@@ -21,8 +21,8 @@ CPPOBJECTS = $(CPPSOURCES:.cc=.obj)
     
 all: $(PROGRAM)  
   
-$(PROGRAM): $(CPPOBJECTS)  
-    link.exe /out:$(PROGRAM)  /DLL  $(CPPOBJECTS)    
+$(PROGRAM):  blas.res $(CPPOBJECTS) 
+    link.exe /out:$(PROGRAM)  /DLL   blas.res  $(CPPOBJECTS) 
       
 assistant.obj:   
     $(cc) $(CPPOPT) /c ../src/assistant.cc     
@@ -39,8 +39,11 @@ cblas3_d.obj:
 lapack_d.obj:   
     $(cc) $(CPPOPT) /c ../src/lapack_d.cc     
     
+blas.res:   
+    rc.exe  $(INCLUDEDIRS) /D  /l"0x0409" /nologo /fo"blas.res" ../src/blas.rc 	
+
 clean:    
-    del $(CPPOBJECTS) $(PROGRAM)  
+    del $(CPPOBJECTS) $(PROGRAM)  blas.res cblas.lib cblas.exp
 
 update:
     copy  $(PROGRAM)  ..\test\$(PROGRAM)  
