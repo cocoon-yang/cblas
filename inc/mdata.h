@@ -51,25 +51,6 @@ public:
 	//	setData(pSource);
 	//}
 
-	MData(const size_t row, const size_t col, double* pSource, int ld, bool Clone = false) : _row(row), _col(col), _ld(ld), _SelfData(Clone), _pData(nullptr), _type((int)MATRIX_TYPE::GENERAL)
-	{
-		if (_col > _ld)
-		{
-			std::cerr << "[ERROR] MData(): Column index " << _col << " is too big." << std::endl;
-			return;
-		}
-
-		init(); 
-		if (_SelfData)
-		{
-			zero();
-			cloneData(pSource); 
-		}
-		else {
-			setData(pSource); 
-		} 
-	}
-
 	MData(const size_t row, const size_t col, double* pSource, bool Clone = false) : _col(col), _row(row), _ld(col), _SelfData(Clone), _pData(nullptr), _type((int)MATRIX_TYPE::GENERAL)
 	{
 		init(); 
@@ -82,6 +63,26 @@ public:
 			setData(pSource);
 		}
 	}
+
+	MData(const size_t row, const size_t col, double* pSource, int ld, int type = 1, bool Clone = false) : _row(row), _col(col), _ld(ld), _SelfData(Clone), _pData(nullptr), _type(type)
+	{
+		if (_col > _ld)
+		{
+			std::cerr << "[ERROR] MData(): Column index " << _col << " is too big." << std::endl;
+			return;
+		}
+
+		init();
+		if (_SelfData)
+		{
+			zero();
+			cloneData(pSource);
+		}
+		else {
+			setData(pSource);
+		}
+	}
+
 
 	MData(const MData& RHS)
 	{
@@ -151,14 +152,17 @@ public:
 		{
 			offset = i * _ld;
 		}
-		else if ((int)MATRIX_TYPE::TRI_LOW == _type)
-		{
-			offset = i * (_ld + 1) / 2;
+		else {
+			std::cerr << "[ERROR] operator[]: This is NOT a rectangle matrix, please use operator (i, j)." << std::endl;
 		}
-		else if ((int)MATRIX_TYPE::TRI_UP == _type)
-		{
-			offset = i * (_ld + _ld - i) / 2;
-		}
+		//else if ((int)MATRIX_TYPE::TRI_LOW == _type)
+		//{
+		//	offset = i * (i + 1) / 2;
+		//}
+		//else if ((int)MATRIX_TYPE::TRI_UP == _type)
+		//{
+		//	offset = (i + 1) * (_ld + _ld - i) / 2 - 1;
+		//}
 		return (_pData + offset);
 	}
 
@@ -185,13 +189,17 @@ public:
 		}
 		case (int)MATRIX_TYPE::TRI_LOW:
 		{
-			offset = i * (_ld + 1) / 2;
-			break;
+			int diff = std::min(i, j);
+			int start = std::max(i, j);
+			offset = start * (start + 1) / 2;
+			return _pData[offset + diff];
 		}
 		case (int)MATRIX_TYPE::TRI_UP:
-		{
-			offset = i * (_ld + _ld - i) / 2;
-			break;
+		{ 
+			int diff = std::abs(int(i - j)); 
+			int start = std::min(i, j);
+			offset =  start * (_ld + _ld - start + 1) / 2;
+			return _pData[offset + diff]; 
 		}
 		}
 
@@ -235,7 +243,7 @@ public:
 public:
 	void setLD(size_t val)
 	{
-		if (val < (size_t)(std::max)(1, (int)_col))
+		if (val < (std::max)(1, (int)_col))
 		{
 			std::cerr << "[ERROR] init(): ld = " << val << " is invalid." << std::endl;
 			return;
@@ -365,9 +373,9 @@ public:
 			return;
 		}
  
-		for (size_t i = 0; i < _row; i++)
+		for (int i = 0; i < _row; i++)
 		{
-			for (size_t j = 0; j < _col; j++)
+			for (int j = 0; j < _col; j++)
 			{
 				(*this)[i][j] = 0.0;
 			} 
@@ -377,14 +385,66 @@ public:
 
 	void show()
 	{
+		if ((int)MATRIX_TYPE::TRI_UP == _type)
+		{
+			const auto default_precision{ std::cout.precision() };
+			std::cout.precision(3);
+			std::cout << std::endl;
+			
+			//for (int i = 0; i < _row; i++)
+			//{
+			//	for (int j = 0; j < _col - i; j++)
+			//	{
+			//		std::cout << "         ";
+			//	}
+			//	for (int j = 0; j < i; j++)
+			//	{ 
+			//		std::cout << std::fixed << (*this)[i][j] << " "; // printf("%7.3f  ", A[t]);
+			//	} 
+			//	std::cout << std::endl;
+			//}
+			int II = 0;
+			for (int I = _row; I > 0; I--)
+			{
+				for (int J = 0; J < _col - I; J++)
+				{
+					printf("         ");
+				}
+				for (int J = 0; J < I; J++)
+				{
+					int t = II + J;
+					printf("%7.3f  ", _pData[t]);
+				}
+				II += (I);
+				printf("\n");
+			}
+			std::cout << std::endl;
+			std::cout.precision(default_precision);
+			return;
+		}
+		if ((int)MATRIX_TYPE::TRI_LOW == _type)
+		{
+			int II = 0;
+			for (int I = 0; I < _row; I++)
+			{
+				for (int J = 0; J < I + 1; J++)
+				{
+					int t = II + J;
+					printf("%7.3f  ", _pData[t]);
+				}
+				II += (I + 1);
+				printf("\n");
+			}
+			return;
+		}
 		if ((int)MATRIX_TYPE::GENERAL == _type)
 		{
 			const auto default_precision{ std::cout.precision() };
 			std::cout.precision(3);
 			std::cout << std::endl;
-			for (size_t i = 0; i < _row; i++)
+			for (int i = 0; i < _row; i++)
 			{
-				for (size_t j = 0; j < _col; j++)
+				for (int j = 0; j < _col; j++)
 				{
 					std::cout << std::fixed << (*this)[i][j] << " ";
 				}
